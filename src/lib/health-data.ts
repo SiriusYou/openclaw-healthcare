@@ -13,7 +13,7 @@ export interface HeartRatePoint {
 
 export interface WeightPoint {
   readonly date: string
-  readonly weight: number
+  readonly kg: number
 }
 
 export interface BloodPressurePoint {
@@ -75,13 +75,13 @@ export const mockHealthData: HealthData = {
     { time: "22:00", bpm: 65 },
   ],
   weight: [
-    { date: "Mon", weight: 69.2 },
-    { date: "Tue", weight: 69.0 },
-    { date: "Wed", weight: 68.8 },
-    { date: "Thu", weight: 69.1 },
-    { date: "Fri", weight: 68.7 },
-    { date: "Sat", weight: 68.6 },
-    { date: "Sun", weight: 68.5 },
+    { date: "Mon", kg: 69.2 },
+    { date: "Tue", kg: 69.0 },
+    { date: "Wed", kg: 68.8 },
+    { date: "Thu", kg: 69.1 },
+    { date: "Fri", kg: 68.7 },
+    { date: "Sat", kg: 68.6 },
+    { date: "Sun", kg: 68.5 },
   ],
   bloodPressure: [
     { date: "Mon", systolic: 118, diastolic: 78 },

@@ -17,16 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-const bloodPressureData = [
-  { date: "Mon", systolic: 118, diastolic: 78 },
-  { date: "Tue", systolic: 122, diastolic: 82 },
-  { date: "Wed", systolic: 115, diastolic: 76 },
-  { date: "Thu", systolic: 128, diastolic: 85 },
-  { date: "Fri", systolic: 120, diastolic: 80 },
-  { date: "Sat", systolic: 125, diastolic: 83 },
-  { date: "Sun", systolic: 119, diastolic: 79 },
-]
+import { mockHealthData } from "@/lib/health-data"
 
 export function formatBpTooltip(value?: number | string, name?: string): [string, string] {
   return [
@@ -47,7 +38,7 @@ export function BloodPressureChart() {
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={bloodPressureData}>
+            <LineChart data={mockHealthData.bloodPressure}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"

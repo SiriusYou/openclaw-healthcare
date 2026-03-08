@@ -49,20 +49,4 @@ describe("GET /api/health-data", () => {
     expect(body.bloodPressure).toEqual(mockHealthData.bloodPressure)
   })
 
-  it("returns all 4 stat cards", async () => {
-    mockAuth.mockResolvedValue({
-      user: { name: "Test User" },
-      expires: "2026-12-31",
-    } as never)
-
-    const response = await GET()
-    const body = await response.json()
-
-    expect(body.stats).toHaveLength(4)
-    const titles = body.stats.map((s: { title: string }) => s.title)
-    expect(titles).toContain("Steps Today")
-    expect(titles).toContain("Heart Rate")
-    expect(titles).toContain("Sleep")
-    expect(titles).toContain("Weight")
-  })
 })

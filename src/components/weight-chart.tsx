@@ -16,16 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-const weightData = [
-  { date: "Mon", kg: 69.2 },
-  { date: "Tue", kg: 69.0 },
-  { date: "Wed", kg: 68.8 },
-  { date: "Thu", kg: 69.1 },
-  { date: "Fri", kg: 68.7 },
-  { date: "Sat", kg: 68.6 },
-  { date: "Sun", kg: 68.5 },
-]
+import { mockHealthData } from "@/lib/health-data"
 
 export function WeightChart() {
   return (
@@ -37,7 +28,7 @@ export function WeightChart() {
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={weightData}>
+            <LineChart data={mockHealthData.weight}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"
