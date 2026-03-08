@@ -11,6 +11,7 @@ import { Activity, Heart, Moon, Weight } from "lucide-react"
 import { HealthChat } from "@/components/health-chat"
 import { HeartRateChart } from "@/components/heart-rate-chart"
 import { WeightChart } from "@/components/weight-chart"
+import { BloodPressureChart } from "@/components/blood-pressure-chart"
 
 const healthCards = [
   {
@@ -84,6 +85,8 @@ export default async function DashboardPage() {
       <HeartRateChart />
 
       <WeightChart />
+
+      <BloodPressureChart />
 
       <HealthChat
         healthData={{
