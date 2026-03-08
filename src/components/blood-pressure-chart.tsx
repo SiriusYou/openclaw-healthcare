@@ -28,6 +28,13 @@ const bloodPressureData = [
   { date: "Sun", systolic: 119, diastolic: 79 },
 ]
 
+export function formatBpTooltip(value: number | string, name: string): [string, string] {
+  return [
+    `${value} mmHg`,
+    name === "systolic" ? "Systolic" : "Diastolic",
+  ]
+}
+
 export function BloodPressureChart() {
   return (
     <Card>
@@ -60,10 +67,7 @@ export function BloodPressureChart() {
                   borderRadius: "var(--radius)",
                   color: "hsl(var(--card-foreground))",
                 }}
-                formatter={(value, name) => [
-                  `${value} mmHg`,
-                  name === "systolic" ? "Systolic" : "Diastolic",
-                ]}
+                formatter={formatBpTooltip}
               />
               <ReferenceLine
                 y={120}

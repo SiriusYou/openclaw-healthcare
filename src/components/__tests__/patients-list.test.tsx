@@ -86,6 +86,20 @@ describe("PatientsList", () => {
     )
   })
 
+  it("supports keyboard navigation with Space key", async () => {
+    const user = userEvent.setup()
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {})
+    const { view } = renderPatientsList()
+
+    const row = view.getByText("Wang Jun").closest("tr")!
+    row.focus()
+    await user.keyboard(" ")
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Navigate to patient detail: P003 - Wang Jun"
+    )
+  })
+
   it("renders rows with button role for accessibility", () => {
     const { view } = renderPatientsList()
 

@@ -1,6 +1,6 @@
 import { render, within } from "@testing-library/react"
 import { describe, it, expect, vi } from "vitest"
-import { BloodPressureChart } from "../blood-pressure-chart"
+import { BloodPressureChart, formatBpTooltip } from "../blood-pressure-chart"
 
 vi.mock("recharts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("recharts")>()
@@ -41,5 +41,17 @@ describe("BloodPressureChart", () => {
 
     const chartWrapper = view.getByTestId("responsive-container").parentElement
     expect(chartWrapper).toHaveClass("h-[300px]")
+  })
+
+  it("formats systolic tooltip correctly", () => {
+    const [value, label] = formatBpTooltip(120, "systolic")
+    expect(value).toBe("120 mmHg")
+    expect(label).toBe("Systolic")
+  })
+
+  it("formats diastolic tooltip correctly", () => {
+    const [value, label] = formatBpTooltip(80, "diastolic")
+    expect(value).toBe("80 mmHg")
+    expect(label).toBe("Diastolic")
   })
 })
