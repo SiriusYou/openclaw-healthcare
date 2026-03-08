@@ -54,4 +54,10 @@ describe("BloodPressureChart", () => {
     expect(value).toBe("80 mmHg")
     expect(label).toBe("Diastolic")
   })
+
+  it("handles undefined value in tooltip", () => {
+    const [value, label] = formatBpTooltip(undefined, "systolic")
+    expect(value).toBe("— mmHg")
+    expect(label).toBe("Systolic")
+  })
 })

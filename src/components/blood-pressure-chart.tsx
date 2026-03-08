@@ -28,9 +28,9 @@ const bloodPressureData = [
   { date: "Sun", systolic: 119, diastolic: 79 },
 ]
 
-export function formatBpTooltip(value: number | string, name: string): [string, string] {
+export function formatBpTooltip(value?: number | string, name?: string): [string, string] {
   return [
-    `${value} mmHg`,
+    `${value ?? "—"} mmHg`,
     name === "systolic" ? "Systolic" : "Diastolic",
   ]
 }
