@@ -4,11 +4,13 @@ import {
   Activity,
   Moon,
   Weight,
+  Users,
   Settings,
 } from "lucide-react"
 
 const navItems = [
   { icon: LayoutDashboard, label: "Overview", href: "/dashboard", active: true },
+  { icon: Users, label: "Patient Management", href: "/dashboard/patients" },
   { icon: Heart, label: "Heart Rate", href: "#" },
   { icon: Activity, label: "Activity", href: "#" },
   { icon: Moon, label: "Sleep", href: "#" },
