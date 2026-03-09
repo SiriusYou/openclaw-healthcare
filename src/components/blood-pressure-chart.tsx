@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { mockHealthData } from "@/lib/health-data"
+import type { BloodPressurePoint } from "@/lib/health-data"
 
 export function formatBpTooltip(value?: number | string, name?: string): [string, string] {
   return [
@@ -26,7 +26,11 @@ export function formatBpTooltip(value?: number | string, name?: string): [string
   ]
 }
 
-export function BloodPressureChart() {
+interface BloodPressureChartProps {
+  readonly data: readonly BloodPressurePoint[]
+}
+
+export function BloodPressureChart({ data }: BloodPressureChartProps) {
   return (
     <Card>
       <CardHeader>
@@ -38,7 +42,7 @@ export function BloodPressureChart() {
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mockHealthData.bloodPressure}>
+            <LineChart data={data as BloodPressurePoint[]}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"

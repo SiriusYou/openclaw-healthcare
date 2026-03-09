@@ -1,6 +1,7 @@
 import { render, within } from "@testing-library/react"
 import { describe, it, expect, vi } from "vitest"
 import { BloodPressureChart, formatBpTooltip } from "../blood-pressure-chart"
+import type { BloodPressurePoint } from "@/lib/health-data"
 
 vi.mock("recharts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("recharts")>()
@@ -12,8 +13,14 @@ vi.mock("recharts", async (importOriginal) => {
   }
 })
 
-function renderChart() {
-  const result = render(<BloodPressureChart />)
+const mockData: readonly BloodPressurePoint[] = [
+  { date: "Mon", systolic: 118, diastolic: 78 },
+  { date: "Tue", systolic: 122, diastolic: 82 },
+  { date: "Wed", systolic: 115, diastolic: 76 },
+]
+
+function renderChart(data: readonly BloodPressurePoint[] = mockData) {
+  const result = render(<BloodPressureChart data={data} />)
   const view = within(result.container)
   return { ...result, view }
 }

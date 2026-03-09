@@ -1,6 +1,3 @@
-"use client"
-
-import { useEffect, useState } from "react"
 import { Activity, Heart, Moon, Weight } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import {
@@ -19,58 +16,11 @@ const iconMap: Record<HealthStat["icon"], LucideIcon> = {
   weight: Weight,
 }
 
-export function DashboardStats() {
-  const [stats, setStats] = useState<readonly HealthStat[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+interface DashboardStatsProps {
+  readonly stats: readonly HealthStat[]
+}
 
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const res = await fetch("/api/health-data")
-        if (!res.ok) {
-          throw new Error(`Failed to fetch health data: ${res.status}`)
-        }
-        const data = await res.json()
-        setStats(data.stats)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchStats()
-  }, [])
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="py-6 text-center text-sm text-destructive">
-          Failed to load health stats: {error}
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-            </CardHeader>
-            <CardContent>
-              <div className="h-7 w-16 animate-pulse rounded bg-muted" />
-              <div className="mt-2 h-3 w-20 animate-pulse rounded bg-muted" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
+export function DashboardStats({ stats }: DashboardStatsProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat) => {

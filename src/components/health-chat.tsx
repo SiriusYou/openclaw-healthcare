@@ -11,20 +11,14 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { getHealthResponse } from "@/lib/health-responses"
+import type { HealthChatSummary } from "@/lib/health-data"
 
 type Message = {
   readonly role: "user" | "assistant"
   readonly content: string
 }
 
-type HealthData = {
-  readonly steps: string
-  readonly heartRate: string
-  readonly sleep: string
-  readonly weight: string
-}
-
-export function HealthChat({ healthData }: { readonly healthData: HealthData }) {
+export function HealthChat({ healthData }: { readonly healthData: HealthChatSummary }) {
   const [messages, setMessages] = useState<readonly Message[]>([
     {
       role: "assistant",

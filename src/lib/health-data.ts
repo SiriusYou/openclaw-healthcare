@@ -29,7 +29,29 @@ export interface HealthData {
   readonly bloodPressure: readonly BloodPressurePoint[]
 }
 
-export const mockHealthData: HealthData = {
+export interface HealthChatSummary {
+  readonly steps: string
+  readonly heartRate: string
+  readonly sleep: string
+  readonly weight: string
+}
+
+export async function getHealthData(): Promise<HealthData> {
+  return mockHealthData
+}
+
+export function deriveChatSummary(data: HealthData): HealthChatSummary {
+  const byIcon: Partial<Record<HealthStat["icon"], string>> =
+    Object.fromEntries(data.stats.map(s => [s.icon, s.value]))
+  return {
+    steps: byIcon.activity ?? "—",
+    heartRate: byIcon.heart ?? "—",
+    sleep: byIcon.moon ?? "—",
+    weight: byIcon.weight ?? "—",
+  }
+}
+
+const mockHealthData: HealthData = {
   stats: [
     {
       title: "Steps Today",

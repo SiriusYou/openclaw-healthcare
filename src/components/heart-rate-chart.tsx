@@ -16,9 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { mockHealthData } from "@/lib/health-data"
+import type { HeartRatePoint } from "@/lib/health-data"
 
-export function HeartRateChart() {
+interface HeartRateChartProps {
+  readonly data: readonly HeartRatePoint[]
+}
+
+export function HeartRateChart({ data }: HeartRateChartProps) {
   return (
     <Card>
       <CardHeader>
@@ -28,7 +32,7 @@ export function HeartRateChart() {
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mockHealthData.heartRate}>
+            <LineChart data={data as HeartRatePoint[]}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="time"

@@ -1,116 +1,68 @@
-import { render, within, waitFor } from "@testing-library/react"
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, within } from "@testing-library/react"
+import { describe, it, expect } from "vitest"
 import { DashboardStats } from "../dashboard-stats"
-import { mockHealthData } from "@/lib/health-data"
+import type { HealthStat } from "@/lib/health-data"
 
-function mockFetchSuccess() {
-  vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    new Response(JSON.stringify(mockHealthData), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    })
-  )
-}
+const mockStats: readonly HealthStat[] = [
+  {
+    title: "Steps Today",
+    value: "8,432",
+    description: "Goal: 10,000",
+    icon: "activity",
+    trend: "+12% from yesterday",
+  },
+  {
+    title: "Heart Rate",
+    value: "72 bpm",
+    description: "Resting average",
+    icon: "heart",
+    trend: "Normal range",
+  },
+  {
+    title: "Sleep",
+    value: "7h 24m",
+    description: "Last night",
+    icon: "moon",
+    trend: "+30min from average",
+  },
+  {
+    title: "Weight",
+    value: "68.5 kg",
+    description: "Updated today",
+    icon: "weight",
+    trend: "-0.3 kg this week",
+  },
+]
 
-function mockFetchError(status: number) {
-  vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status,
-      headers: { "Content-Type": "application/json" },
-    })
-  )
-}
-
-function renderStats() {
-  const result = render(<DashboardStats />)
+function renderStats(stats: readonly HealthStat[] = mockStats) {
+  const result = render(<DashboardStats stats={stats} />)
   const view = within(result.container)
   return { ...result, view }
 }
 
 describe("DashboardStats", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it("shows loading skeletons initially", () => {
-    vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise(() => {}))
-
-    const { container } = renderStats()
-
-    const skeletons = container.querySelectorAll(".animate-pulse")
-    expect(skeletons.length).toBeGreaterThan(0)
-  })
-
-  it("hides loading skeletons after stats load", async () => {
-    mockFetchSuccess()
-
-    const { container } = renderStats()
-
-    await waitFor(() => {
-      expect(container.querySelectorAll(".animate-pulse").length).toBe(0)
-    })
-  })
-
-  it("renders all stat cards after fetch", async () => {
-    mockFetchSuccess()
-
+  it("renders all stat cards", () => {
     const { view } = renderStats()
 
-    await waitFor(() => {
-      expect(view.getByText(mockHealthData.stats[0].title)).toBeInTheDocument()
-    })
-
-    for (const stat of mockHealthData.stats) {
+    for (const stat of mockStats) {
       expect(view.getByText(stat.title)).toBeInTheDocument()
     }
   })
 
-  it("displays stat values and trends", async () => {
-    mockFetchSuccess()
-
+  it("displays stat values, descriptions, and trends", () => {
     const { view } = renderStats()
 
-    await waitFor(() => {
-      expect(view.getByText(mockHealthData.stats[0].value)).toBeInTheDocument()
-    })
-
-    for (const stat of mockHealthData.stats) {
+    for (const stat of mockStats) {
       expect(view.getByText(stat.value)).toBeInTheDocument()
+      expect(view.getByText(stat.description)).toBeInTheDocument()
       expect(view.getByText(stat.trend)).toBeInTheDocument()
     }
   })
 
-  it("shows error state on fetch failure", async () => {
-    mockFetchError(401)
+  it("renders empty grid when no stats provided", () => {
+    const { container } = renderStats([])
 
-    const { view } = renderStats()
-
-    await waitFor(() => {
-      expect(
-        view.getByText(/Failed to load health stats/)
-      ).toBeInTheDocument()
-    })
-  })
-
-  it("shows error state on network failure", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"))
-
-    const { view } = renderStats()
-
-    await waitFor(() => {
-      expect(view.getByText(/Network error/)).toBeInTheDocument()
-    })
-  })
-
-  it("fetches from /api/health-data", async () => {
-    mockFetchSuccess()
-
-    const { view } = renderStats()
-
-    await waitFor(() => {
-      expect(view.getByText(mockHealthData.stats[0].title)).toBeInTheDocument()
-    })
-
-    expect(globalThis.fetch).toHaveBeenCalledWith("/api/health-data")
+    const cards = container.querySelectorAll("[class*='card']")
+    expect(cards.length).toBe(0)
   })
 })

@@ -16,9 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { mockHealthData } from "@/lib/health-data"
+import type { WeightPoint } from "@/lib/health-data"
 
-export function WeightChart() {
+interface WeightChartProps {
+  readonly data: readonly WeightPoint[]
+}
+
+export function WeightChart({ data }: WeightChartProps) {
   return (
     <Card>
       <CardHeader>
@@ -28,7 +32,7 @@ export function WeightChart() {
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mockHealthData.weight}>
+            <LineChart data={data as WeightPoint[]}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"

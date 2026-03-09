@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import { getHealthData, deriveChatSummary } from "@/lib/health-data"
 import { DashboardStats } from "@/components/dashboard-stats"
 import { HealthChat } from "@/components/health-chat"
 import { HeartRateChart } from "@/components/heart-rate-chart"
@@ -13,8 +14,10 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
+  const data = await getHealthData()
+
   return (
-    <div className="space-y-6">
+    <div data-testid="dashboard-root" className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
           Welcome back, {session.user.name}
@@ -24,22 +27,15 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <DashboardStats />
+      <DashboardStats stats={data.stats} />
 
-      <HeartRateChart />
+      <HeartRateChart data={data.heartRate} />
 
-      <WeightChart />
+      <WeightChart data={data.weight} />
 
-      <BloodPressureChart />
+      <BloodPressureChart data={data.bloodPressure} />
 
-      <HealthChat
-        healthData={{
-          steps: "8,432",
-          heartRate: "72 bpm",
-          sleep: "7h 24m",
-          weight: "68.5 kg",
-        }}
-      />
+      <HealthChat healthData={deriveChatSummary(data)} />
     </div>
   )
 }
