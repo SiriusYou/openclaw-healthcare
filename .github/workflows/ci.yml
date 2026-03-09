@@ -29,7 +29,7 @@ jobs:
       - name: Test
         run: bun run test
 
-      - name: Coverage (soft gate)
+      - name: Coverage (baseline)
         run: bun run test:coverage
         continue-on-error: true
 

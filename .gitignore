@@ -42,3 +42,6 @@ next-env.d.ts
 
 # omc state
 .omc/
+
+# project docs
+openclaw-architecture.pdf
