@@ -16,9 +16,9 @@ export default defineConfig({
         "src/**/*.spec.*",
       ],
       thresholds: {
-        lines: 30,
-        branches: 30,
-        functions: 30,
+        lines: 48,
+        branches: 56,
+        functions: 44,
       },
     },
   },

@@ -3,6 +3,12 @@ import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { PatientsList, mockPatients, type Patient } from "../patients-list"
 
+const mockPush = vi.fn()
+
+vi.mock("next/navigation", () => ({
+  useRouter: vi.fn(() => ({ push: mockPush })),
+}))
+
 function renderPatientsList(patients?: readonly Patient[]) {
   const props = patients !== undefined ? { patients } : {}
   const result = render(<PatientsList {...props} />)
@@ -13,6 +19,7 @@ function renderPatientsList(patients?: readonly Patient[]) {
 describe("PatientsList", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    mockPush.mockClear()
   })
 
   it("renders the card with title and description", () => {
@@ -59,45 +66,36 @@ describe("PatientsList", () => {
     expect(view.queryByText("Zhang Wei")).not.toBeInTheDocument()
   })
 
-  it("logs patient info to console on row click", async () => {
+  it("navigates to patient detail on row click", async () => {
     const user = userEvent.setup()
-    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {})
     const { view } = renderPatientsList()
 
     const row = view.getByText("Zhang Wei").closest("tr")!
     await user.click(row)
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Navigate to patient detail: P001 - Zhang Wei"
-    )
+    expect(mockPush).toHaveBeenCalledWith("/dashboard/patients/P001")
   })
 
   it("supports keyboard navigation with Enter key", async () => {
     const user = userEvent.setup()
-    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {})
     const { view } = renderPatientsList()
 
     const row = view.getByText("Li Na").closest("tr")!
     row.focus()
     await user.keyboard("{Enter}")
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Navigate to patient detail: P002 - Li Na"
-    )
+    expect(mockPush).toHaveBeenCalledWith("/dashboard/patients/P002")
   })
 
   it("supports keyboard navigation with Space key", async () => {
     const user = userEvent.setup()
-    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {})
     const { view } = renderPatientsList()
 
     const row = view.getByText("Wang Jun").closest("tr")!
     row.focus()
     await user.keyboard(" ")
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Navigate to patient detail: P003 - Wang Jun"
-    )
+    expect(mockPush).toHaveBeenCalledWith("/dashboard/patients/P003")
   })
 
   it("renders rows with button role for accessibility", () => {

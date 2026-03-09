@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import {
   Card,
   CardContent,
@@ -68,12 +69,13 @@ export const mockPatients: readonly Patient[] = [
   },
 ]
 
-function handlePatientClick(patient: Patient) {
-  // TODO: Replace with router navigation to /dashboard/patients/[id]
-  console.info(`Navigate to patient detail: ${patient.id} - ${patient.name}`)
-}
-
 export function PatientsList({ patients = mockPatients }: { patients?: readonly Patient[] }) {
+  const router = useRouter()
+
+  function handlePatientClick(id: string) {
+    router.push(`/dashboard/patients/${id}`)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -108,11 +110,11 @@ export function PatientsList({ patients = mockPatients }: { patients?: readonly 
                   role="button"
                   tabIndex={0}
                   className="cursor-pointer"
-                  onClick={() => handlePatientClick(patient)}
+                  onClick={() => handlePatientClick(patient.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault()
-                      handlePatientClick(patient)
+                      handlePatientClick(patient.id)
                     }
                   }}
                 >
