@@ -41,18 +41,28 @@ describe("DashboardStats", () => {
     expect(skeletons.length).toBeGreaterThan(0)
   })
 
+  it("hides loading skeletons after stats load", async () => {
+    mockFetchSuccess()
+
+    const { container } = renderStats()
+
+    await waitFor(() => {
+      expect(container.querySelectorAll(".animate-pulse").length).toBe(0)
+    })
+  })
+
   it("renders all stat cards after fetch", async () => {
     mockFetchSuccess()
 
     const { view } = renderStats()
 
     await waitFor(() => {
-      expect(view.getByText("Steps Today")).toBeInTheDocument()
+      expect(view.getByText(mockHealthData.stats[0].title)).toBeInTheDocument()
     })
 
-    expect(view.getByText("Heart Rate")).toBeInTheDocument()
-    expect(view.getByText("Sleep")).toBeInTheDocument()
-    expect(view.getByText("Weight")).toBeInTheDocument()
+    for (const stat of mockHealthData.stats) {
+      expect(view.getByText(stat.title)).toBeInTheDocument()
+    }
   })
 
   it("displays stat values and trends", async () => {
@@ -61,13 +71,13 @@ describe("DashboardStats", () => {
     const { view } = renderStats()
 
     await waitFor(() => {
-      expect(view.getByText("8,432")).toBeInTheDocument()
+      expect(view.getByText(mockHealthData.stats[0].value)).toBeInTheDocument()
     })
 
-    expect(view.getByText("72 bpm")).toBeInTheDocument()
-    expect(view.getByText("7h 24m")).toBeInTheDocument()
-    expect(view.getByText("68.5 kg")).toBeInTheDocument()
-    expect(view.getByText("+12% from yesterday")).toBeInTheDocument()
+    for (const stat of mockHealthData.stats) {
+      expect(view.getByText(stat.value)).toBeInTheDocument()
+      expect(view.getByText(stat.trend)).toBeInTheDocument()
+    }
   })
 
   it("shows error state on fetch failure", async () => {
@@ -98,7 +108,7 @@ describe("DashboardStats", () => {
     const { view } = renderStats()
 
     await waitFor(() => {
-      expect(view.getByText("Steps Today")).toBeInTheDocument()
+      expect(view.getByText(mockHealthData.stats[0].title)).toBeInTheDocument()
     })
 
     expect(globalThis.fetch).toHaveBeenCalledWith("/api/health-data")
