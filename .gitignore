@@ -45,3 +45,8 @@ next-env.d.ts
 
 # project docs
 openclaw-architecture.pdf
+
+# playwright
+e2e/.auth/
+/test-results/
+/playwright-report/
