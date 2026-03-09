@@ -6,6 +6,7 @@ export default defineConfig({
     command: process.env.CI ? "bun run start" : "bun run build && bun run start",
     port: 3000,
     reuseExistingServer: !process.env.CI,
+    timeout: 180000,
   },
   use: {
     baseURL: "http://localhost:3000",

@@ -1,21 +1,24 @@
-import { render, screen } from "@testing-library/react"
-import { describe, it, expect, vi } from "vitest"
+import { render, screen, cleanup } from "@testing-library/react"
+import { describe, it, expect, vi, afterEach } from "vitest"
 import { DashboardSidebar } from "../dashboard-sidebar"
 
+const mockPathname = vi.fn()
+
 vi.mock("next/navigation", () => ({
-  usePathname: vi.fn(() => "/dashboard"),
+  usePathname: () => mockPathname(),
 }))
 
-import { usePathname } from "next/navigation"
-
-const mockUsePathname = vi.mocked(usePathname)
-
 function renderSidebar(pathname = "/dashboard") {
-  mockUsePathname.mockReturnValue(pathname)
+  mockPathname.mockReturnValue(pathname)
   return render(<DashboardSidebar />)
 }
 
 describe("DashboardSidebar", () => {
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
+
   it("renders all navigation items", () => {
     renderSidebar()
 
@@ -36,6 +39,22 @@ describe("DashboardSidebar", () => {
       el.closest("a")?.className.includes("bg-primary")
     )
     expect(activeLink).toBeTruthy()
+  })
+
+  it("highlights parent nav on nested routes", () => {
+    renderSidebar("/dashboard/patients/P001")
+
+    const patientsLinks = screen.getAllByText("Patients")
+    const patientsActive = patientsLinks.find((el) =>
+      el.closest("a")?.className.includes("bg-primary")
+    )
+    expect(patientsActive).toBeTruthy()
+
+    const overviewLinks = screen.getAllByText("Overview")
+    const overviewActive = overviewLinks.find((el) =>
+      el.closest("a")?.className.includes("bg-primary")
+    )
+    expect(overviewActive).toBeFalsy()
   })
 
   it("renders correct hrefs for all nav items", () => {
