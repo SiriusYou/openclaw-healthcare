@@ -28,9 +28,36 @@ export async function bootstrapTriggers() {
   `)
 
   // Single active run per task — DB-level constraint (ADR-5)
-  await db.run(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_single_active_run
-    ON runs(task_id)
-    WHERE status IN ('pending', 'claimed', 'running')
-  `)
+  // Clean up any pre-existing dirty data that would block index creation
+  // (e.g. from runs before this constraint existed)
+  try {
+    await db.run(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_single_active_run
+      ON runs(task_id)
+      WHERE status IN ('pending', 'claimed', 'running')
+    `)
+  } catch {
+    // Dirty data exists — deduplicate: keep only the latest active run per task
+    await db.run(sql`
+      UPDATE runs SET status = 'failed'
+      WHERE id IN (
+        SELECT r.id FROM runs r
+        INNER JOIN (
+          SELECT task_id, MAX(rowid) AS max_rowid
+          FROM runs
+          WHERE status IN ('pending', 'claimed', 'running')
+          GROUP BY task_id
+          HAVING COUNT(*) > 1
+        ) dupes ON r.task_id = dupes.task_id
+        WHERE r.status IN ('pending', 'claimed', 'running')
+          AND r.rowid < dupes.max_rowid
+      )
+    `)
+    // Retry index creation after cleanup
+    await db.run(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_single_active_run
+      ON runs(task_id)
+      WHERE status IN ('pending', 'claimed', 'running')
+    `)
+  }
 }
