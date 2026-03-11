@@ -49,19 +49,21 @@ export async function POST(request: NextRequest) {
     agentKind,
   }
 
-  await db.insert(tasks).values(task)
-
   if (autoRun) {
     const runId = nanoid()
-    await db.insert(runs).values({
-      id: runId,
-      taskId,
-      agentKind,
-      status: "pending",
-      attempt: 1,
-    })
+    await db.batch([
+      db.insert(tasks).values(task),
+      db.insert(runs).values({
+        id: runId,
+        taskId,
+        agentKind,
+        status: "pending",
+        attempt: 1,
+      }),
+    ])
     return json({ ...task, runId }, 201)
   }
 
+  await db.insert(tasks).values(task)
   return json(task, 201)
 }

@@ -250,7 +250,7 @@ async function orphanLoop() {
       .where(
         and(
           inArray(runs.status, ["claimed", "running"]),
-          lt(runs.heartbeatAt, sql`datetime(unixepoch() - ${HEARTBEAT_TIMEOUT}, 'unixepoch')`)
+          lt(runs.heartbeatAt, sql`unixepoch() - ${HEARTBEAT_TIMEOUT}`)
         )
       )
 

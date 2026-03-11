@@ -53,17 +53,17 @@ export default function RunDetailPage() {
   const logEndRef = useRef<HTMLDivElement>(null)
 
   const fetchRun = useCallback(async () => {
-    const res = await fetch(`/api/runs?taskId=_all`)
+    const res = await fetch("/api/runs")
     if (!res.ok) return
     const allRuns: readonly RunDetail[] = await res.json()
     const found = allRuns.find((r) => r.id === runId)
     if (found) {
       setRun(found)
       if (found.taskId) {
-        const taskRes = await fetch(`/api/tasks?status=_all`)
+        const taskRes = await fetch("/api/tasks")
         if (taskRes.ok) {
           const allTasks: readonly TaskDetail[] = await taskRes.json()
-          const t = allTasks.find((t) => t.id === found.taskId)
+          const t = allTasks.find((tt) => tt.id === found.taskId)
           if (t) setTask(t)
         }
       }

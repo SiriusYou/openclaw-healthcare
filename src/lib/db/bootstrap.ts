@@ -26,4 +26,11 @@ export async function bootstrapTriggers() {
       SELECT RAISE(ABORT, 'events table is append-only');
     END
   `)
+
+  // Single active run per task — DB-level constraint (ADR-5)
+  await db.run(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_single_active_run
+    ON runs(task_id)
+    WHERE status IN ('pending', 'claimed', 'running')
+  `)
 }

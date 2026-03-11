@@ -33,7 +33,15 @@ export async function POST(
     return error("Run is not eligible for manual retry", 409)
   }
 
-  // Check no active run
+  // Check no active run for this task
+  const allTaskRuns = await db.select().from(runs).where(eq(runs.taskId, run.taskId))
+  const hasActiveRun = allTaskRuns.some((r) =>
+    ["pending", "claimed", "running"].includes(r.status ?? "")
+  )
+  if (hasActiveRun) {
+    return error("Task already has an active run", 409)
+  }
+
   const task = await db.query.tasks.findFirst({ where: eq(tasks.id, run.taskId) })
   if (!task) return error("Task not found", 404)
 
