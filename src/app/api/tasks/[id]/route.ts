@@ -5,6 +5,16 @@ import { eq, and, inArray } from "drizzle-orm"
 import { z } from "zod"
 import { json, error } from "@/lib/api-utils"
 
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const task = await db.query.tasks.findFirst({ where: eq(tasks.id, id) })
+  if (!task) return error("Task not found", 404)
+  return json(task)
+}
+
 const patchSchema = z.object({
   status: z.enum(["cancelled"]).optional(),
   title: z.string().min(1).max(500).optional(),

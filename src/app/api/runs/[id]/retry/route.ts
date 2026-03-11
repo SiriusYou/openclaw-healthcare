@@ -45,25 +45,33 @@ export async function POST(
   const task = await db.query.tasks.findFirst({ where: eq(tasks.id, run.taskId) })
   if (!task) return error("Task not found", 404)
 
-  // Create new run
+  // Create new run atomically
   const newRunId = nanoid()
   const nextAttempt = (run.attempt ?? 0) + 1
 
-  // If orphaned, mark old run as cleanup_pending
-  if (isOrphaned) {
-    await db.update(runs).set({ status: "cleanup_pending" }).where(eq(runs.id, id))
+  const batchOps = [
+    db.insert(runs).values({
+      id: newRunId,
+      taskId: run.taskId,
+      agentKind: task.agentKind as "codex" | "claude" | "gemini" | "fake",
+      status: "pending",
+      attempt: nextAttempt,
+      worktreePath: run.worktreePath,
+    }),
+    db.update(tasks).set({ status: "queued", updatedAt: new Date() }).where(eq(tasks.id, run.taskId)),
+    ...(isOrphaned
+      ? [db.update(runs).set({ status: "cleanup_pending" }).where(eq(runs.id, id))]
+      : []),
+  ] as const
+
+  try {
+    await db.batch(batchOps as unknown as [typeof batchOps[0], ...typeof batchOps[number][]])
+  } catch (err) {
+    if (String(err).includes("UNIQUE constraint failed")) {
+      return error("Task already has an active run", 409)
+    }
+    throw err
   }
-
-  await db.insert(runs).values({
-    id: newRunId,
-    taskId: run.taskId,
-    agentKind: task.agentKind as "codex" | "claude" | "gemini" | "fake",
-    status: "pending",
-    attempt: nextAttempt,
-    worktreePath: run.worktreePath,
-  })
-
-  await db.update(tasks).set({ status: "queued", updatedAt: new Date() }).where(eq(tasks.id, run.taskId))
 
   const newRun = await db.query.runs.findFirst({ where: eq(runs.id, newRunId) })
   return json(newRun, 201)

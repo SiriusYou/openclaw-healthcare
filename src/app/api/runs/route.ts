@@ -50,13 +50,20 @@ export async function POST(request: NextRequest) {
   const nextAttempt = activeRun ? (activeRun.attempt ?? 0) + 1 : 1
 
   const runId = nanoid()
-  await db.insert(runs).values({
-    id: runId,
-    taskId: parsed.data.taskId,
-    agentKind,
-    status: "pending",
-    attempt: nextAttempt,
-  })
+  try {
+    await db.insert(runs).values({
+      id: runId,
+      taskId: parsed.data.taskId,
+      agentKind,
+      status: "pending",
+      attempt: nextAttempt,
+    })
+  } catch (err) {
+    if (String(err).includes("UNIQUE constraint failed")) {
+      return error("Task already has an active run", 409)
+    }
+    throw err
+  }
 
   await db.update(tasks).set({ status: "queued", updatedAt: new Date() }).where(eq(tasks.id, parsed.data.taskId))
 
