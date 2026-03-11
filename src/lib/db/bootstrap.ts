@@ -36,7 +36,11 @@ export async function bootstrapTriggers() {
       ON runs(task_id)
       WHERE status IN ('pending', 'claimed', 'running')
     `)
-  } catch {
+  } catch (err) {
+    // Only handle uniqueness violations from pre-existing dirty data
+    if (!String(err).includes("UNIQUE constraint failed")) {
+      throw err
+    }
     // Dirty data exists — deduplicate: keep only the latest active run per task
     await db.run(sql`
       UPDATE runs SET status = 'failed'
