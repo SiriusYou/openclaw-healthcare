@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import type { HeartRatePoint } from "@/lib/health-data"
+import { tooltipContentStyle } from "./chart-styles"
 
 interface HeartRateChartProps {
   readonly data: readonly HeartRatePoint[]
@@ -32,7 +33,7 @@ export function HeartRateChart({ data }: HeartRateChartProps) {
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data as HeartRatePoint[]}>
+            <LineChart data={[...data]}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="time"
@@ -46,12 +47,7 @@ export function HeartRateChart({ data }: HeartRateChartProps) {
                 tickFormatter={(value: number) => `${value}`}
               />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "var(--radius)",
-                  color: "hsl(var(--card-foreground))",
-                }}
+                contentStyle={tooltipContentStyle}
                 formatter={(value) => [`${value} bpm`, "Heart Rate"]}
               />
               <Line

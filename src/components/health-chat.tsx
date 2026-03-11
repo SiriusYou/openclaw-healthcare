@@ -29,6 +29,7 @@ export function HealthChat({ healthData }: { readonly healthData: HealthChatSumm
   const [input, setInput] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -37,6 +38,12 @@ export function HealthChat({ healthData }: { readonly healthData: HealthChatSumm
     })
   }, [messages])
 
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [])
+
   const streamResponse = useCallback((fullText: string) => {
     setIsStreaming(true)
     let index = 0
@@ -44,7 +51,7 @@ export function HealthChat({ healthData }: { readonly healthData: HealthChatSumm
     const placeholder: Message = { role: "assistant", content: "" }
     setMessages((prev) => [...prev, placeholder])
 
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       index++
       const partial = fullText.slice(0, index)
 
@@ -54,7 +61,8 @@ export function HealthChat({ healthData }: { readonly healthData: HealthChatSumm
       ])
 
       if (index >= fullText.length) {
-        clearInterval(interval)
+        if (intervalRef.current) clearInterval(intervalRef.current)
+        intervalRef.current = null
         setIsStreaming(false)
       }
     }, 15)

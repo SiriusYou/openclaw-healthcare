@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import type { WeightPoint } from "@/lib/health-data"
+import { tooltipContentStyle } from "./chart-styles"
 
 interface WeightChartProps {
   readonly data: readonly WeightPoint[]
@@ -32,7 +33,7 @@ export function WeightChart({ data }: WeightChartProps) {
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data as WeightPoint[]}>
+            <LineChart data={[...data]}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"
@@ -46,12 +47,7 @@ export function WeightChart({ data }: WeightChartProps) {
                 tickFormatter={(value: number) => `${value}`}
               />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "var(--radius)",
-                  color: "hsl(var(--card-foreground))",
-                }}
+                contentStyle={tooltipContentStyle}
                 formatter={(value) => [`${value} kg`, "Weight"]}
               />
               <Line

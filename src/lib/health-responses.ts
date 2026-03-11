@@ -1,11 +1,6 @@
-type HealthData = {
-  steps: string
-  heartRate: string
-  sleep: string
-  weight: string
-}
+import type { HealthChatSummary } from "./health-data"
 
-const responses: Record<string, (data: HealthData) => string> = {
+const responses: Record<string, (data: HealthChatSummary) => string> = {
   steps: (data) =>
     `You've taken ${data.steps} steps today! That's great progress. To hit your 10,000-step goal, try a short walk after meals — even 10 minutes helps. Consistency matters more than intensity for daily step counts.`,
 
@@ -37,7 +32,7 @@ const fallbackResponses = [
   "I'd love to help! Try asking me about your step count, sleep quality, heart rate, weight management, exercise routines, or nutrition tips.",
 ]
 
-export function getHealthResponse(message: string, data: HealthData): string {
+export function getHealthResponse(message: string, data: HealthChatSummary): string {
   const lower = message.toLowerCase()
 
   for (const [keyword, responseFn] of Object.entries(responses)) {
