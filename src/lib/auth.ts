@@ -1,14 +1,8 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 
-const DEMO_USERS = [
-  {
-    id: "1",
-    name: "Admin",
-    email: "admin@openclaw.com",
-    password: "admin123",
-  },
-] as const
+const operatorEmail = process.env.OPERATOR_EMAIL ?? "admin@example.com"
+const operatorPassword = process.env.OPERATOR_PASSWORD ?? "change-me"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -22,13 +16,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = credentials?.email as string
         const password = credentials?.password as string
 
-        const user = DEMO_USERS.find(
-          (u) => u.email === email && u.password === password
-        )
+        if (email === operatorEmail && password === operatorPassword) {
+          return { id: "1", name: "Operator", email }
+        }
 
-        if (!user) return null
-
-        return { id: user.id, name: user.name, email: user.email }
+        return null
       },
     }),
   ],

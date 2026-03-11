@@ -8,8 +8,8 @@ test("login page renders with form", async ({ page }) => {
   await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible()
 })
 
-test("login page shows email placeholder", async ({ page }) => {
+test("login page shows agent swarm branding", async ({ page }) => {
   await page.goto("/login")
 
-  await expect(page.getByPlaceholder("admin@openclaw.com")).toBeVisible()
+  await expect(page.getByText("OpenClaw Agent Swarm")).toBeVisible()
 })

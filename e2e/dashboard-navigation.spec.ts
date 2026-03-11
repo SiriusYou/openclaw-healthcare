@@ -2,11 +2,9 @@ import { test, expect } from "@playwright/test"
 
 const navRoutes = [
   { label: "Overview", route: "/dashboard", title: "Welcome back" },
-  { label: "Patients", route: "/dashboard/patients", title: "Patient Management" },
-  { label: "Heart Rate", route: "/dashboard/heart-rate", title: "Heart Rate" },
-  { label: "Activity", route: "/dashboard/activity", title: "Activity" },
-  { label: "Sleep", route: "/dashboard/sleep", title: "Sleep" },
-  { label: "Weight", route: "/dashboard/weight", title: "Weight" },
+  { label: "Inbox", route: "/dashboard/inbox", title: "Inbox" },
+  { label: "Runs", route: "/dashboard/runs", title: "Runs" },
+  { label: "Reviews", route: "/dashboard/reviews", title: "Reviews" },
   { label: "Settings", route: "/dashboard/settings", title: "Settings" },
 ]
 
@@ -19,10 +17,10 @@ for (const { label, route, title } of navRoutes) {
   })
 }
 
-test("all 7 sidebar nav links are present", async ({ page }) => {
+test("all 5 sidebar nav links are present", async ({ page }) => {
   await page.goto("/dashboard")
 
-  const navLabels = ["Overview", "Patients", "Heart Rate", "Activity", "Sleep", "Weight", "Settings"]
+  const navLabels = ["Overview", "Inbox", "Runs", "Reviews", "Settings"]
   for (const label of navLabels) {
     await expect(page.getByRole("link", { name: label }).first()).toBeVisible()
   }

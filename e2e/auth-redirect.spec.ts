@@ -7,11 +7,9 @@ test("unauthenticated visit to / redirects to /login", async ({ page }) => {
 
 const protectedRoutes = [
   "/dashboard",
-  "/dashboard/patients",
-  "/dashboard/heart-rate",
-  "/dashboard/activity",
-  "/dashboard/sleep",
-  "/dashboard/weight",
+  "/dashboard/inbox",
+  "/dashboard/runs",
+  "/dashboard/reviews",
   "/dashboard/settings",
 ]
 

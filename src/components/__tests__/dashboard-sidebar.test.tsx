@@ -23,32 +23,30 @@ describe("DashboardSidebar", () => {
     renderSidebar()
 
     expect(screen.getByText("Overview")).toBeInTheDocument()
-    expect(screen.getByText("Patients")).toBeInTheDocument()
-    expect(screen.getByText("Heart Rate")).toBeInTheDocument()
-    expect(screen.getByText("Activity")).toBeInTheDocument()
-    expect(screen.getByText("Sleep")).toBeInTheDocument()
-    expect(screen.getByText("Weight")).toBeInTheDocument()
+    expect(screen.getByText("Inbox")).toBeInTheDocument()
+    expect(screen.getByText("Runs")).toBeInTheDocument()
+    expect(screen.getByText("Reviews")).toBeInTheDocument()
     expect(screen.getByText("Settings")).toBeInTheDocument()
   })
 
   it("highlights the active link based on pathname", () => {
-    renderSidebar("/dashboard/patients")
+    renderSidebar("/dashboard/inbox")
 
-    const patientsLinks = screen.getAllByText("Patients")
-    const activeLink = patientsLinks.find((el) =>
+    const inboxLinks = screen.getAllByText("Inbox")
+    const activeLink = inboxLinks.find((el) =>
       el.closest("a")?.className.includes("bg-primary")
     )
     expect(activeLink).toBeTruthy()
   })
 
   it("highlights parent nav on nested routes", () => {
-    renderSidebar("/dashboard/patients/P001")
+    renderSidebar("/dashboard/runs/some-id")
 
-    const patientsLinks = screen.getAllByText("Patients")
-    const patientsActive = patientsLinks.find((el) =>
+    const runsLinks = screen.getAllByText("Runs")
+    const runsActive = runsLinks.find((el) =>
       el.closest("a")?.className.includes("bg-primary")
     )
-    expect(patientsActive).toBeTruthy()
+    expect(runsActive).toBeTruthy()
 
     const overviewLinks = screen.getAllByText("Overview")
     const overviewActive = overviewLinks.find((el) =>
@@ -62,11 +60,9 @@ describe("DashboardSidebar", () => {
 
     const expectedRoutes = [
       "/dashboard",
-      "/dashboard/patients",
-      "/dashboard/heart-rate",
-      "/dashboard/activity",
-      "/dashboard/sleep",
-      "/dashboard/weight",
+      "/dashboard/inbox",
+      "/dashboard/runs",
+      "/dashboard/reviews",
       "/dashboard/settings",
     ]
 
@@ -82,7 +78,7 @@ describe("DashboardSidebar", () => {
     renderSidebar()
 
     expect(screen.getAllByText("OpenClaw").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("Healthcare").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Agent Swarm").length).toBeGreaterThan(0)
   })
 
   it("renders mobile menu trigger button", () => {

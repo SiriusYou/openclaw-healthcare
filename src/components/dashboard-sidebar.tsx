@@ -4,11 +4,9 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
-  Heart,
-  Activity,
-  Moon,
-  Weight,
-  Users,
+  Inbox,
+  Play,
+  ClipboardCheck,
   Settings,
   Menu,
 } from "lucide-react"
@@ -28,11 +26,9 @@ interface NavItem {
 
 const navItems: readonly NavItem[] = [
   { icon: LayoutDashboard, label: "Overview", href: "/dashboard" },
-  { icon: Users, label: "Patients", href: "/dashboard/patients" },
-  { icon: Heart, label: "Heart Rate", href: "/dashboard/heart-rate" },
-  { icon: Activity, label: "Activity", href: "/dashboard/activity" },
-  { icon: Moon, label: "Sleep", href: "/dashboard/sleep" },
-  { icon: Weight, label: "Weight", href: "/dashboard/weight" },
+  { icon: Inbox, label: "Inbox", href: "/dashboard/inbox" },
+  { icon: Play, label: "Runs", href: "/dashboard/runs" },
+  { icon: ClipboardCheck, label: "Reviews", href: "/dashboard/reviews" },
   { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ]
 
@@ -71,7 +67,7 @@ export function DashboardSidebar() {
       <aside className="hidden w-64 border-r bg-card p-6 md:block">
         <div className="mb-8">
           <h2 className="text-lg font-semibold">OpenClaw</h2>
-          <p className="text-sm text-muted-foreground">Healthcare</p>
+          <p className="text-sm text-muted-foreground">Agent Swarm</p>
         </div>
         <NavLinks pathname={pathname} />
       </aside>
@@ -86,7 +82,7 @@ export function DashboardSidebar() {
           <SheetContent side="left" className="w-64 p-6">
             <div className="mb-8">
               <h2 className="text-lg font-semibold">OpenClaw</h2>
-              <p className="text-sm text-muted-foreground">Healthcare</p>
+              <p className="text-sm text-muted-foreground">Agent Swarm</p>
             </div>
             <NavLinks pathname={pathname} />
           </SheetContent>

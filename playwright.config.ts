@@ -1,11 +1,14 @@
 import { defineConfig } from "@playwright/test"
+import { config } from "dotenv"
+
+config({ path: ".env.local" })
 
 export default defineConfig({
   testDir: "e2e",
   webServer: {
-    command: process.env.CI ? "bun run start" : "bun run build && bun run start",
+    command: "bun run build && bun run start",
     port: 3000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 180000,
   },
   use: {
@@ -14,7 +17,10 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+    },
     {
       name: "unauthenticated",
       use: { storageState: { cookies: [], origins: [] } },

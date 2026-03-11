@@ -35,12 +35,12 @@ describe("LoginForm", () => {
   it("renders the login form with title, inputs, and button", () => {
     const { view, emailInput, passwordInput, submitButton } = renderLoginForm()
 
-    expect(view.getByText("OpenClaw Healthcare")).toBeInTheDocument()
+    expect(view.getByText("OpenClaw Agent Swarm")).toBeInTheDocument()
     expect(view.getByText("Sign in to your account")).toBeInTheDocument()
     expect(emailInput()).toBeInTheDocument()
     expect(passwordInput()).toBeInTheDocument()
     expect(submitButton()).toHaveTextContent("Sign in")
-    expect(view.getByText(/Demo:/)).toBeInTheDocument()
+    expect(view.getByText(/operator credentials/)).toBeInTheDocument()
   })
 
   it("has correct input types and placeholders", () => {
