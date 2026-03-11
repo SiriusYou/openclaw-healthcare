@@ -9,19 +9,31 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "db:push": "mkdir -p .data && drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:bootstrap": "bun src/lib/db/bootstrap-cli.ts",
+    "worker:raw": "bun src/lib/agents/runner-worker.ts",
+    "worker": "bun run db:push && bun run db:bootstrap && bun run worker:raw",
+    "dev:all": "bun run db:push && bun run db:bootstrap && concurrently --kill-others-on-fail \"bun run dev\" \"bun run worker:raw\"",
+    "start:all": "bun run db:push && bun run db:bootstrap && concurrently --kill-others-on-fail \"bun run start\" \"bun run worker:raw\"",
+    "e2e:prepare": "bun src/lib/db/e2e-prepare.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.1",
     "lucide-react": "^0.576.0",
+    "nanoid": "^5.1.6",
     "next": "16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.7.0",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -34,7 +46,9 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^4.0.18",
+    "concurrently": "^9.2.1",
     "dotenv": "^17.3.1",
+    "drizzle-kit": "^0.31.9",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "jsdom": "^28.1.0",

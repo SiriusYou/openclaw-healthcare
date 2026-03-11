@@ -10,6 +10,14 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    env:
+      AUTH_SECRET: ci-test-secret-not-for-production
+      AUTH_TRUST_HOST: "true"
+      OPERATOR_EMAIL: test@ci.local
+      OPERATOR_PASSWORD: ci-test-password
+      AGENT_ADAPTER: fake
+      DATABASE_URL: "file:.data/ci-test.db"
+
     steps:
       - uses: actions/checkout@v4
 
