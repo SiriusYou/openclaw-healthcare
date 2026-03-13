@@ -31,6 +31,8 @@ interface Task {
   readonly agentKind: string | null
   readonly createdAt: string | null
   readonly updatedAt: string | null
+  readonly mergeRequested: boolean | null
+  readonly lastMergeError: string | null
 }
 
 function priorityColor(priority: string | null) {
@@ -203,9 +205,15 @@ export default function InboxPage() {
                     <div key={task.id} className="flex items-center justify-between rounded-md border p-3">
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{task.title}</p>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Badge variant={statusColor(task.status)}>{task.status}</Badge>
                           <Badge variant={priorityColor(task.priority)}>{task.priority}</Badge>
+                          {task.status === "pr_ready" && task.mergeRequested && (
+                            <Badge variant="secondary">Merging...</Badge>
+                          )}
+                          {task.status === "pr_ready" && task.lastMergeError && (
+                            <Badge variant="destructive">Merge failed</Badge>
+                          )}
                         </div>
                       </div>
                       <Button

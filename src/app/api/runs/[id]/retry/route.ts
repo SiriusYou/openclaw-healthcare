@@ -29,7 +29,8 @@ export async function POST(
   // Check retry eligibility
   const isOrphaned = run.status === "orphaned"
   const isExhaustedFailed = run.status === "failed" && (run.attempt ?? 0) >= MAX_AUTO_RETRIES + 1
-  if (!isOrphaned && !isExhaustedFailed) {
+  const isStaleBlocked = run.status === "failed" && run.finishReason === "stale_process_blocked"
+  if (!isOrphaned && !isExhaustedFailed && !isStaleBlocked) {
     return error("Run is not eligible for manual retry", 409)
   }
 
@@ -57,6 +58,9 @@ export async function POST(
       status: "pending",
       attempt: nextAttempt,
       worktreePath: run.worktreePath,
+      branch: run.branch,
+      baseBranch: run.baseBranch,
+      baseCommitSha: run.baseCommitSha,
     }),
     db.update(tasks).set({ status: "queued", updatedAt: new Date() }).where(eq(tasks.id, run.taskId)),
     ...(isOrphaned

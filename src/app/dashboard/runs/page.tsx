@@ -14,6 +14,7 @@ interface Run {
   readonly attempt: number | null
   readonly branch: string | null
   readonly exitCode: number | null
+  readonly finishReason: string | null
   readonly createdAt: string | null
   readonly startedAt: string | null
   readonly finishedAt: string | null
@@ -44,6 +45,7 @@ function canRetry(run: Run, allRuns: readonly Run[]): boolean {
   if (hasActiveRun) return false
 
   if (run.status === "orphaned") return true
+  if (run.status === "failed" && run.finishReason === "stale_process_blocked") return true
   if (run.status === "failed" && (run.attempt ?? 0) >= MAX_AUTO_RETRIES + 1) return true
   return false
 }
@@ -110,9 +112,14 @@ export default function RunsPage() {
                   <div className="flex items-center gap-2">
                     <Badge variant={statusColor(run.status)}>{run.status}</Badge>
                     {canRetry(run, runs) && (
-                      <Button size="sm" variant="outline" onClick={() => handleRetry(run.id)}>
-                        Retry
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="outline" onClick={() => handleRetry(run.id)}>
+                          Retry
+                        </Button>
+                        {run.finishReason === "stale_process_blocked" && (
+                          <span className="text-xs text-muted-foreground">Kill stale process first</span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

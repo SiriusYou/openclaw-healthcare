@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { db } from "@/lib/db"
-import { tasks, runs } from "@/lib/db/schema"
-import { eq, desc } from "drizzle-orm"
+import { tasks, runs, events } from "@/lib/db/schema"
+import { eq, desc, and } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import { json, error } from "@/lib/api-utils"
@@ -25,7 +25,24 @@ export async function GET(request: NextRequest) {
     : await db.select().from(tasks)
         .orderBy(desc(tasks.createdAt)).limit(limit)
 
-  return json(result)
+  const enriched = await Promise.all(result.map(async (task) => {
+    let lastMergeError: string | null = null
+    if (task.status === "pr_ready") {
+      const mergeEvent = await db.select().from(events)
+        .where(and(eq(events.taskId, task.id), eq(events.type, "merge_result")))
+        .orderBy(desc(events.id))
+        .limit(1)
+      if (mergeEvent.length > 0 && mergeEvent[0].payload) {
+        try {
+          const parsed = JSON.parse(mergeEvent[0].payload)
+          lastMergeError = parsed.message ?? null
+        } catch { /* ignore */ }
+      }
+    }
+    return { ...task, lastMergeError }
+  }))
+
+  return json(enriched)
 }
 
 export async function POST(request: NextRequest) {

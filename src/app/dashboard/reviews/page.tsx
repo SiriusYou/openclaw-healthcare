@@ -11,6 +11,8 @@ interface Task {
   readonly title: string
   readonly status: string | null
   readonly priority: string | null
+  readonly mergeRequested: boolean | null
+  readonly lastMergeError: string | null
 }
 
 interface Run {
@@ -139,9 +141,18 @@ export default function ReviewsPage() {
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{task.title}</p>
                         <Badge variant="secondary">pr_ready</Badge>
+                        {task.lastMergeError && (
+                          <div className="text-xs text-destructive">
+                            {task.lastMergeError} — Fix conflicts then merge again
+                          </div>
+                        )}
                       </div>
-                      <Button size="sm" onClick={() => handleMerge(task.id)}>
-                        Mark as Merged
+                      <Button
+                        size="sm"
+                        disabled={task.mergeRequested === true}
+                        onClick={() => handleMerge(task.id)}
+                      >
+                        {task.mergeRequested ? "Merging..." : "Merge"}
                       </Button>
                     </div>
                   ))}

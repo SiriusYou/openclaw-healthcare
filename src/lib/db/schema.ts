@@ -18,6 +18,9 @@ export const tasks = sqliteTable("tasks", {
   agentKind: text("agent_kind", {
     enum: ["codex", "claude", "gemini", "fake"],
   }).default("fake"),
+  mergeRequested: integer("merge_requested", { mode: "boolean" }).default(false),
+  approvedRunId: text("approved_run_id"),
+  approvedCommitSha: text("approved_commit_sha"),
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
 })
@@ -36,8 +39,14 @@ export const runs = sqliteTable("runs", {
   }).default("pending"),
   attempt: integer("attempt").default(1),
   worktreePath: text("worktree_path"),
-  tmuxSession: text("tmux_session"),
   branch: text("branch"),
+  baseBranch: text("base_branch"),
+  baseCommitSha: text("base_commit_sha"),
+  headCommitSha: text("head_commit_sha"),
+  agentPid: integer("agent_pid"),
+  finishReason: text("finish_reason", {
+    enum: ["completed", "cancelled", "failed", "timeout", "stale_process_blocked"],
+  }),
   exitCode: integer("exit_code"),
   claimedAt: integer("claimed_at", { mode: "timestamp" }),
   claimedBy: text("claimed_by"),
@@ -48,11 +57,15 @@ export const runs = sqliteTable("runs", {
 })
 
 export const events = sqliteTable("events", {
-  id: text("id").primaryKey(),
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  eventId: text("event_id"),
   runId: text("run_id").references(() => runs.id),
   taskId: text("task_id").references(() => tasks.id),
   type: text("type", {
-    enum: ["log", "status_change", "error", "output", "review_rejected", "cleanup_error"],
+    enum: [
+      "log", "status_change", "error", "output",
+      "review_rejected", "cleanup_error", "merge_result",
+    ],
   }),
   payload: text("payload"),
   timestamp: integer("timestamp", { mode: "timestamp" }).default(sql`(unixepoch())`),

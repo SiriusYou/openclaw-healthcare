@@ -37,7 +37,7 @@ export async function POST(
   // Log rejection event
   if (latestRun) {
     await db.insert(events).values({
-      id: nanoid(),
+      eventId: nanoid(),
       runId: latestRun.id,
       type: "review_rejected",
       payload: JSON.stringify({ reason: reason ?? "No reason provided" }),
@@ -53,9 +53,17 @@ export async function POST(
     status: "pending",
     attempt: nextAttempt,
     worktreePath: latestRun?.worktreePath,
+    branch: latestRun?.branch,
+    baseBranch: latestRun?.baseBranch,
+    baseCommitSha: latestRun?.baseCommitSha,
   })
 
-  await db.update(tasks).set({ status: "queued", updatedAt: new Date() }).where(eq(tasks.id, id))
+  await db.update(tasks).set({
+    status: "queued",
+    updatedAt: new Date(),
+    approvedRunId: null,
+    approvedCommitSha: null,
+  }).where(eq(tasks.id, id))
 
   return json({ taskId: id, newRunId, attempt: nextAttempt }, 201)
 }

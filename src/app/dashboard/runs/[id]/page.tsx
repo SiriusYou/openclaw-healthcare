@@ -14,6 +14,7 @@ interface RunDetail {
   readonly attempt: number | null
   readonly branch: string | null
   readonly exitCode: number | null
+  readonly finishReason: string | null
   readonly worktreePath: string | null
   readonly createdAt: string | null
   readonly startedAt: string | null
@@ -24,10 +25,12 @@ interface TaskDetail {
   readonly id: string
   readonly title: string
   readonly status: string | null
+  readonly mergeRequested: boolean | null
+  readonly lastMergeError: string | null
 }
 
 interface EventEntry {
-  readonly id: string
+  readonly id: number
   readonly type: string | null
   readonly payload: string | null
   readonly timestamp: string | null
@@ -83,14 +86,18 @@ export default function RunDetailPage() {
     }
   }, [fetchRun])
 
-  // SSE event stream
+  // SSE event stream — deduplicate by integer id to handle reconnects
+  const lastEventIdRef = useRef<number>(0)
+
   useEffect(() => {
     if (!runId) return
 
-    const eventSource = new EventSource(`/api/events/${runId}`)
+    const eventSource = new EventSource(`/api/events/${runId}?after=${lastEventIdRef.current}`)
     eventSource.onmessage = (e) => {
       try {
         const event: EventEntry = JSON.parse(e.data)
+        if (event.id <= lastEventIdRef.current) return // skip duplicate
+        lastEventIdRef.current = event.id
         setEvents((prev) => [...prev, event])
       } catch {
         // ignore parse errors
@@ -191,6 +198,31 @@ export default function RunDetailPage() {
         </Card>
       )}
 
+      {["failed", "succeeded", "cancelled", "orphaned"].includes(run.status ?? "") && run.finishReason && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Finish Reason</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {run.finishReason === "stale_process_blocked" && (
+              <p className="text-sm text-destructive">A stale agent process is still running. Kill the process manually, then retry.</p>
+            )}
+            {run.finishReason === "timeout" && (
+              <p className="text-sm text-muted-foreground">Agent heartbeat timed out</p>
+            )}
+            {run.finishReason === "failed" && (
+              <p className="text-sm text-muted-foreground">Agent exited with non-zero code</p>
+            )}
+            {run.finishReason === "completed" && (
+              <p className="text-sm text-green-600">Completed successfully</p>
+            )}
+            {run.finishReason === "cancelled" && (
+              <p className="text-sm text-muted-foreground">Cancelled by operator</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {(showApproveReject || showMerge) && (
         <Card>
           <CardHeader>
@@ -204,7 +236,17 @@ export default function RunDetailPage() {
               </>
             )}
             {showMerge && (
-              <Button onClick={handleMerge}>Mark as Merged</Button>
+              <div className="space-y-2">
+                <Button
+                  disabled={task?.mergeRequested === true}
+                  onClick={handleMerge}
+                >
+                  {task?.mergeRequested ? "Merging..." : "Merge"}
+                </Button>
+                {task?.lastMergeError && (
+                  <p className="text-sm text-destructive">{task.lastMergeError}</p>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>

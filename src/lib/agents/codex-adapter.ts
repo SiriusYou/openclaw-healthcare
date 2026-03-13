@@ -1,10 +1,10 @@
-import type { AgentAdapter, RunResult } from "./types"
+import type { AgentAdapter, AgentHandle } from "./types"
 
 export const codexAdapter: AgentAdapter = {
   kind: "codex",
-  usesTmux: true,
+  usesTmux: false,
 
-  async run(): Promise<RunResult> {
+  start(): AgentHandle {
     throw new Error("Codex adapter not implemented — run spike first (scripts/spike-codex-cli.sh)")
   },
 }

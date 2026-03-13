@@ -9,13 +9,23 @@ export interface RunConfig {
   readonly attempt: number
 }
 
-export interface RunResult {
+export interface AgentHandle {
+  readonly pid: number
+  readonly stdout: AsyncIterable<string>
+  readonly stderr: AsyncIterable<string>
+  wait(): Promise<AgentResult>
+  kill(): void
+}
+
+export interface AgentResult {
   readonly exitCode: number
-  readonly output?: string
+  readonly finishedAt: Date
+  readonly finishReason: "completed" | "cancelled" | "failed" | "timeout"
+  readonly commitSha?: string
 }
 
 export interface AgentAdapter {
   readonly kind: AgentKind
   readonly usesTmux: boolean
-  run(config: RunConfig): Promise<RunResult>
+  start(config: RunConfig): AgentHandle
 }

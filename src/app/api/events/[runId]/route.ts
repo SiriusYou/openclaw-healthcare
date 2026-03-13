@@ -1,13 +1,16 @@
 import { NextRequest } from "next/server"
 import { db } from "@/lib/db"
 import { events } from "@/lib/db/schema"
-import { eq, desc } from "drizzle-orm"
+import { eq, and, gt, asc } from "drizzle-orm"
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ runId: string }> }
 ) {
   const { runId } = await params
+  const url = new URL(request.url)
+  const afterParam = url.searchParams.get("after")
+  const initialCursor = afterParam !== null ? parseInt(afterParam, 10) : 0
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -16,39 +19,33 @@ export async function GET(
         controller.enqueue(encoder.encode(`data: ${data}\n\n`))
       }
 
-      // Send initial events
+      // Send initial events ordered by id ASC
       const initial = await db.select().from(events)
-        .where(eq(events.runId, runId))
-        .orderBy(desc(events.timestamp))
+        .where(and(eq(events.runId, runId), gt(events.id, initialCursor)))
+        .orderBy(asc(events.id))
         .limit(50)
 
-      for (const row of initial.reverse()) {
+      for (const row of initial) {
         send(JSON.stringify(row))
       }
 
       let running = true
-      let lastTimestamp = initial.length > 0
-        ? (initial[initial.length - 1]?.timestamp ?? new Date())
-        : new Date(0)
+      let lastId: number = initial.length > 0
+        ? (initial[initial.length - 1]?.id ?? initialCursor)
+        : initialCursor
 
       const interval = setInterval(async () => {
         if (!running) return
 
         try {
           const newEvents = await db.select().from(events)
-            .where(eq(events.runId, runId))
-            .orderBy(desc(events.timestamp))
+            .where(and(eq(events.runId, runId), gt(events.id, lastId)))
+            .orderBy(asc(events.id))
             .limit(20)
 
-          const filtered = newEvents.filter(
-            (e) => e.timestamp && e.timestamp > lastTimestamp
-          )
-
-          for (const row of filtered.reverse()) {
+          for (const row of newEvents) {
             send(JSON.stringify(row))
-            if (row.timestamp && row.timestamp > lastTimestamp) {
-              lastTimestamp = row.timestamp
-            }
+            lastId = row.id
           }
         } catch {
           running = false
