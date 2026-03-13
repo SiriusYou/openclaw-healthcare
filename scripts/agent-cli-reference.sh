@@ -46,6 +46,8 @@
 #   ─────────────────────────────────────────────────────────────────
 #   item.completed (agent_message)    → "output"     → { stream: "stdout", chunk: item.text }
 #   item.completed (command_execution)→ "output"     → { stream: "stdout", chunk: "$ " + item.command + "\n" + item.aggregated_output }
+#   item.completed (file_change)      → "output"     → { stream: "stdout", chunk: "file: " + changes[].kind + " " + changes[].path }
+#   item.completed (reasoning)        → (skip)       → internal model reasoning, not user-facing
 #   item.started   (command_execution)→ (skip)       → not written (wait for completed with full output)
 #   error                             → "output"     → { stream: "stderr", chunk: message }
 #   turn.completed                    → (internal)   → sets sawTurnCompleted=true (success signal, not stored as event)
@@ -84,6 +86,10 @@
 #   - Exit code after SIGTERM: 0 (not distinguishable from success!)
 #   - No `turn.completed` event emitted on cancel (use this to distinguish)
 #
+# Note: the bash spike uses `pgrep -P` which only finds direct children.
+# The real adapter uses Node `spawn(detached: true)` + `process.kill(-pid, 'SIGTERM')`
+# which operates on OS process groups — a stronger guarantee than the spike tested.
+#
 # Adapter strategy:
 #   let cancelled = false
 #   kill() { cancelled = true; process.kill(-pid, 'SIGTERM') }
@@ -102,6 +108,7 @@
 #   - Exits with code 1 even if task succeeds
 #
 # DECISION: Worker disables all MCP servers via -c 'mcp_servers={}'.
+# VERIFIED: 2026-03-13 — with MCP disabled, exit code is 0 on success (was 1 with MCP).
 # Rationale:
 #   - Worker tasks are self-contained file edits — MCP tools are not needed
 #   - MCP failures pollute exit codes (exit 1 on success)
