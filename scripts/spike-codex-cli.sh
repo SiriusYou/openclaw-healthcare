@@ -38,7 +38,7 @@ git -C "$WORKTREE" config user.email "agent@openclaw.local"
 # Contract 1-5: Non-interactive start, cwd, prompt, exit status, output
 # Override model_reasoning_effort (user config may have invalid value)
 ########################################################################
-CODEX_OVERRIDE=(-c 'model_reasoning_effort="high"')
+CODEX_OVERRIDE=(-c 'model_reasoning_effort="high"' -c 'mcp_servers={}')
 
 # Finding #1: Per-invocation commit check — snapshot HEAD before each test
 echo "--- Test A: Plain text mode ---"
