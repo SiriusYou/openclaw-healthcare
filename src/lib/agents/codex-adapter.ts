@@ -38,26 +38,17 @@ function parseCodexEvent(line: string): CodexEvent | null {
  * Format a CodexEvent into a human-readable output line for the events table.
  * Returns null for events that should be skipped (thread.started, turn.started, reasoning).
  */
-function formatEventLine(event: CodexEvent): { stream: "stdout" | "stderr"; chunk: string } | null {
-  if (event.type === "error") {
-    return { stream: "stderr", chunk: event.message ?? "unknown error" }
-  }
-
+function formatEventLine(event: CodexEvent): string | null {
   if (event.type === "item.completed" && event.item) {
     switch (event.item.type) {
       case "agent_message":
-        return event.item.text
-          ? { stream: "stdout", chunk: event.item.text }
-          : null
+        return event.item.text ?? null
       case "command_execution":
-        return {
-          stream: "stdout",
-          chunk: `$ ${event.item.command ?? ""}\n${event.item.aggregated_output ?? ""}`.trim(),
-        }
+        return `$ ${event.item.command ?? ""}\n${event.item.aggregated_output ?? ""}`.trim()
       case "file_change": {
         const changes = event.item.changes ?? []
         const summary = changes.map((c) => `${c.kind} ${c.path}`).join("\n")
-        return { stream: "stdout", chunk: `file: ${summary}` }
+        return `file: ${summary}`
       }
     }
   }
@@ -69,10 +60,12 @@ function formatEventLine(event: CodexEvent): { stream: "stdout" | "stderr"; chun
 /**
  * Stream JSONL lines from codex stdout, yielding formatted output lines.
  * Tracks whether turn.completed was seen (signals success).
+ * Error events are pushed to errorQueue for the stderr iterable to drain.
  */
 async function* parseCodexStream(
   readable: NodeJS.ReadableStream | null,
   state: { sawTurnCompleted: boolean },
+  errorQueue: string[],
 ): AsyncIterable<string> {
   if (!readable) return
   let buffer = ""
@@ -91,9 +84,13 @@ async function* parseCodexStream(
         state.sawTurnCompleted = true
         continue
       }
+      if (event.type === "error") {
+        errorQueue.push(event.message ?? "unknown error")
+        continue
+      }
       const formatted = formatEventLine(event)
       if (formatted) {
-        yield formatted.chunk
+        yield formatted
       }
     }
   }
@@ -102,9 +99,11 @@ async function* parseCodexStream(
     if (event) {
       if (event.type === "turn.completed") {
         state.sawTurnCompleted = true
+      } else if (event.type === "error") {
+        errorQueue.push(event.message ?? "unknown error")
       } else {
         const formatted = formatEventLine(event)
-        if (formatted) yield formatted.chunk
+        if (formatted) yield formatted
       }
     } else {
       yield buffer
@@ -113,34 +112,57 @@ async function* parseCodexStream(
 }
 
 /**
- * Stream stderr lines (raw, no JSONL parsing).
+ * Stream stderr lines from child.stderr + JSONL error events from errorQueue.
+ * Error events from the JSONL stdout parser are routed here to preserve
+ * the correct stream classification per the Step 1 contract.
  */
-async function* streamLines(
+async function* streamStderr(
   readable: NodeJS.ReadableStream | null,
+  errorQueue: string[],
 ): AsyncIterable<string> {
-  if (!readable) return
-  let buffer = ""
-  for await (const chunk of readable) {
-    buffer += String(chunk)
-    const lines = buffer.split("\n")
-    buffer = lines.pop() ?? ""
-    for (const line of lines) {
-      yield line
-    }
+  // Drain any errors that arrived before we started consuming
+  while (errorQueue.length > 0) {
+    yield errorQueue.shift()!
   }
-  if (buffer) yield buffer
+
+  if (readable) {
+    let buffer = ""
+    for await (const chunk of readable) {
+      // Drain error queue on each iteration (errors arrive concurrently)
+      while (errorQueue.length > 0) {
+        yield errorQueue.shift()!
+      }
+      buffer += String(chunk)
+      const lines = buffer.split("\n")
+      buffer = lines.pop() ?? ""
+      for (const line of lines) {
+        yield line
+      }
+    }
+    if (buffer) yield buffer
+  }
+
+  // Final drain after stderr closes
+  while (errorQueue.length > 0) {
+    yield errorQueue.shift()!
+  }
 }
 
 /**
  * After a successful Codex run, commit any uncommitted changes in the worktree.
  * Codex uses internal `apply_patch` and does NOT auto-commit.
  */
-function commitWorktreeChanges(worktreePath: string, taskId: string): string | undefined {
+type CommitResult =
+  | { status: "committed"; sha: string }
+  | { status: "no_changes" }
+  | { status: "error"; message: string }
+
+function commitWorktreeChanges(worktreePath: string, taskId: string): CommitResult {
   try {
-    const status = execFileSync("git", ["-C", worktreePath, "status", "--porcelain"], {
+    const dirty = execFileSync("git", ["-C", worktreePath, "status", "--porcelain"], {
       encoding: "utf-8",
     }).trim()
-    if (!status) return undefined // nothing to commit
+    if (!dirty) return { status: "no_changes" }
 
     execFileSync("git", ["-C", worktreePath, "add", "-A"], { stdio: "pipe" })
     execFileSync(
@@ -152,9 +174,9 @@ function commitWorktreeChanges(worktreePath: string, taskId: string): string | u
     const sha = execFileSync("git", ["-C", worktreePath, "rev-parse", "HEAD"], {
       encoding: "utf-8",
     }).trim()
-    return sha
-  } catch {
-    return undefined
+    return { status: "committed", sha }
+  } catch (err) {
+    return { status: "error", message: String(err) }
   }
 }
 
@@ -184,6 +206,7 @@ export const codexAdapter: AgentAdapter = {
 
     let cancelled = false
     const state = { sawTurnCompleted: false }
+    const errorQueue: string[] = []
 
     // Eagerly scan for turn.completed via raw data listener.
     // This fires synchronously on data arrival, independent of the async
@@ -197,8 +220,8 @@ export const codexAdapter: AgentAdapter = {
 
     return {
       pid: child.pid!,
-      stdout: parseCodexStream(child.stdout, state),
-      stderr: streamLines(child.stderr),
+      stdout: parseCodexStream(child.stdout, state, errorQueue),
+      stderr: streamStderr(child.stderr, errorQueue),
 
       wait(): Promise<AgentResult> {
         return new Promise((resolve) => {
@@ -211,10 +234,21 @@ export const codexAdapter: AgentAdapter = {
               finishReason = "cancelled"
               exitCode = 1
             } else if (state.sawTurnCompleted) {
-              finishReason = "completed"
-              exitCode = 0
               // Codex doesn't auto-commit — commit worktree changes now
-              commitSha = commitWorktreeChanges(config.worktreePath, config.taskId)
+              const commitResult = commitWorktreeChanges(config.worktreePath, config.taskId)
+              if (commitResult.status === "committed") {
+                finishReason = "completed"
+                exitCode = 0
+                commitSha = commitResult.sha
+              } else if (commitResult.status === "no_changes") {
+                // Agent completed but made no file changes — still a success
+                finishReason = "completed"
+                exitCode = 0
+              } else {
+                // Commit failed — treat as failure to prevent stale SHA approval
+                finishReason = "failed"
+                exitCode = 1
+              }
             } else {
               finishReason = "failed"
               exitCode = code ?? 1

@@ -136,6 +136,15 @@ async function runAgent(
     return
   }
 
+  // Guard: if the run was cancelled/cleaned while we were waiting, don't overwrite.
+  // cancel-loop sends SIGTERM directly (bypassing adapter.kill()), so the adapter
+  // may not know about the cancellation. Re-read status from DB before writing.
+  const currentRun = await db.query.runs.findFirst({ where: eq(runs.id, runId) })
+  if (currentRun && currentRun.status !== "running") {
+    // Run was moved by cancel-loop or cleanup-loop — don't overwrite
+    return
+  }
+
   // Capture head commit sha from worktree
   let headCommitSha: string | undefined
   try {
