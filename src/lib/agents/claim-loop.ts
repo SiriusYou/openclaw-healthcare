@@ -151,12 +151,13 @@ async function runAgent(
   // cancel-loop sends SIGTERM directly (bypassing adapter.kill()), then moves
   // the run to cleanup_pending. Without this WHERE clause, a TOCTOU race can
   // resurrect a cancelled run to succeeded/failed.
+  const finishedAtEpoch = Math.floor(result.finishedAt.getTime() / 1000)
   const updated = await db.run(sql`
     UPDATE runs
     SET status = ${newStatus},
         exit_code = ${result.exitCode},
         finish_reason = ${result.finishReason},
-        finished_at = ${result.finishedAt.toISOString()},
+        finished_at = ${finishedAtEpoch},
         head_commit_sha = ${headCommitSha ?? result.commitSha ?? null},
         agent_pid = NULL
     WHERE id = ${runId} AND status = 'running'
@@ -179,8 +180,14 @@ async function runAgent(
     }),
   })
 
+  // Task-level transitions are also guarded to prevent resurrecting a cancelled task.
+  // If the operator cancelled the task between the run update and here, these
+  // conditional UPDATEs will be no-ops (task status won't be 'in_progress').
   if (succeeded) {
-    await db.update(tasks).set({ status: "awaiting_review", updatedAt: new Date() }).where(eq(tasks.id, taskId))
+    await db.run(sql`
+      UPDATE tasks SET status = 'awaiting_review', updated_at = unixepoch()
+      WHERE id = ${taskId} AND status = 'in_progress'
+    `)
     return
   }
 
@@ -199,9 +206,15 @@ async function runAgent(
       baseBranch,
       baseCommitSha,
     })
-    await db.update(tasks).set({ status: "queued", updatedAt: new Date() }).where(eq(tasks.id, taskId))
+    await db.run(sql`
+      UPDATE tasks SET status = 'queued', updated_at = unixepoch()
+      WHERE id = ${taskId} AND status = 'in_progress'
+    `)
   } else {
-    await db.update(tasks).set({ status: "failed", updatedAt: new Date() }).where(eq(tasks.id, taskId))
+    await db.run(sql`
+      UPDATE tasks SET status = 'failed', updated_at = unixepoch()
+      WHERE id = ${taskId} AND status = 'in_progress'
+    `)
   }
 }
 
