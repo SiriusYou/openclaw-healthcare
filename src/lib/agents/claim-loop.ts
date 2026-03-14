@@ -136,15 +136,6 @@ async function runAgent(
     return
   }
 
-  // Guard: if the run was cancelled/cleaned while we were waiting, don't overwrite.
-  // cancel-loop sends SIGTERM directly (bypassing adapter.kill()), so the adapter
-  // may not know about the cancellation. Re-read status from DB before writing.
-  const currentRun = await db.query.runs.findFirst({ where: eq(runs.id, runId) })
-  if (currentRun && currentRun.status !== "running") {
-    // Run was moved by cancel-loop or cleanup-loop — don't overwrite
-    return
-  }
-
   // Capture head commit sha from worktree
   let headCommitSha: string | undefined
   try {
@@ -154,15 +145,27 @@ async function runAgent(
   }
 
   const succeeded = result.exitCode === 0
+  const newStatus = succeeded ? "succeeded" : "failed"
 
-  await db.update(runs).set({
-    status: succeeded ? "succeeded" : "failed",
-    exitCode: result.exitCode,
-    finishReason: result.finishReason,
-    finishedAt: result.finishedAt,
-    headCommitSha: headCommitSha ?? result.commitSha ?? null,
-    agentPid: null,
-  }).where(eq(runs.id, runId))
+  // Atomic guard: only write result if run is still "running".
+  // cancel-loop sends SIGTERM directly (bypassing adapter.kill()), then moves
+  // the run to cleanup_pending. Without this WHERE clause, a TOCTOU race can
+  // resurrect a cancelled run to succeeded/failed.
+  const updated = await db.run(sql`
+    UPDATE runs
+    SET status = ${newStatus},
+        exit_code = ${result.exitCode},
+        finish_reason = ${result.finishReason},
+        finished_at = ${result.finishedAt.toISOString()},
+        head_commit_sha = ${headCommitSha ?? result.commitSha ?? null},
+        agent_pid = NULL
+    WHERE id = ${runId} AND status = 'running'
+  `)
+
+  if (updated.rowsAffected === 0) {
+    // Run was moved by cancel-loop or cleanup-loop — don't overwrite
+    return
+  }
 
   await db.insert(events).values({
     eventId: nanoid(),
@@ -170,8 +173,9 @@ async function runAgent(
     type: "status_change",
     payload: JSON.stringify({
       from: "running",
-      to: succeeded ? "succeeded" : "failed",
+      to: newStatus,
       finishReason: result.finishReason,
+      ...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
     }),
   })
 

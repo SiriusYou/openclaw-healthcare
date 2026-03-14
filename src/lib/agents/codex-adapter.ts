@@ -65,7 +65,7 @@ function formatEventLine(event: CodexEvent): string | null {
 async function* parseCodexStream(
   readable: NodeJS.ReadableStream | null,
   state: { sawTurnCompleted: boolean },
-  errorQueue: string[],
+  errorChannel: ErrorChannel,
 ): AsyncIterable<string> {
   if (!readable) return
   let buffer = ""
@@ -85,7 +85,7 @@ async function* parseCodexStream(
         continue
       }
       if (event.type === "error") {
-        errorQueue.push(event.message ?? "unknown error")
+        errorChannel.push(event.message ?? "unknown error")
         continue
       }
       const formatted = formatEventLine(event)
@@ -100,7 +100,7 @@ async function* parseCodexStream(
       if (event.type === "turn.completed") {
         state.sawTurnCompleted = true
       } else if (event.type === "error") {
-        errorQueue.push(event.message ?? "unknown error")
+        errorChannel.push(event.message ?? "unknown error")
       } else {
         const formatted = formatEventLine(event)
         if (formatted) yield formatted
@@ -109,42 +109,120 @@ async function* parseCodexStream(
       yield buffer
     }
   }
+  // Signal that no more errors will be pushed from stdout parsing
+  errorChannel.done()
 }
 
 /**
- * Stream stderr lines from child.stderr + JSONL error events from errorQueue.
- * Error events from the JSONL stdout parser are routed here to preserve
- * the correct stream classification per the Step 1 contract.
+ * Async channel for routing JSONL error events from stdout parser to stderr consumer.
+ * Uses a notify pattern so the consumer wakes immediately when errors arrive,
+ * even if child.stderr is quiet.
+ */
+interface ErrorChannel {
+  push(msg: string): void
+  done(): void
+  [Symbol.asyncIterator](): AsyncIterator<string>
+}
+
+function createErrorChannel(): ErrorChannel {
+  const queue: string[] = []
+  let resolve: (() => void) | null = null
+  let closed = false
+
+  return {
+    push(msg: string) {
+      queue.push(msg)
+      if (resolve) {
+        resolve()
+        resolve = null
+      }
+    },
+    done() {
+      closed = true
+      if (resolve) {
+        resolve()
+        resolve = null
+      }
+    },
+    [Symbol.asyncIterator]() {
+      return {
+        async next(): Promise<IteratorResult<string>> {
+          while (queue.length === 0 && !closed) {
+            await new Promise<void>((r) => { resolve = r })
+          }
+          if (queue.length > 0) {
+            return { value: queue.shift()!, done: false }
+          }
+          return { value: undefined as unknown as string, done: true }
+        },
+      }
+    },
+  }
+}
+
+/**
+ * Merge child.stderr lines with JSONL error events from the error channel.
+ * Both sources are consumed concurrently and yielded as they arrive.
  */
 async function* streamStderr(
   readable: NodeJS.ReadableStream | null,
-  errorQueue: string[],
+  errorChannel: ErrorChannel,
 ): AsyncIterable<string> {
-  // Drain any errors that arrived before we started consuming
-  while (errorQueue.length > 0) {
-    yield errorQueue.shift()!
-  }
+  // Consume both sources concurrently via a shared output queue
+  const output: string[] = []
+  let outputResolve: (() => void) | null = null
+  let doneCount = 0
+  const totalSources = 2
 
-  if (readable) {
-    let buffer = ""
-    for await (const chunk of readable) {
-      // Drain error queue on each iteration (errors arrive concurrently)
-      while (errorQueue.length > 0) {
-        yield errorQueue.shift()!
-      }
-      buffer += String(chunk)
-      const lines = buffer.split("\n")
-      buffer = lines.pop() ?? ""
-      for (const line of lines) {
-        yield line
-      }
+  function enqueue(line: string) {
+    output.push(line)
+    if (outputResolve) {
+      outputResolve()
+      outputResolve = null
     }
-    if (buffer) yield buffer
   }
 
-  // Final drain after stderr closes
-  while (errorQueue.length > 0) {
-    yield errorQueue.shift()!
+  function markDone() {
+    doneCount++
+    if (outputResolve) {
+      outputResolve()
+      outputResolve = null
+    }
+  }
+
+  // Source 1: child.stderr
+  void (async () => {
+    if (readable) {
+      let buffer = ""
+      for await (const chunk of readable) {
+        buffer += String(chunk)
+        const lines = buffer.split("\n")
+        buffer = lines.pop() ?? ""
+        for (const line of lines) {
+          enqueue(line)
+        }
+      }
+      if (buffer) enqueue(buffer)
+    }
+    markDone()
+  })()
+
+  // Source 2: error channel (JSONL errors from stdout parser)
+  void (async () => {
+    for await (const msg of errorChannel) {
+      enqueue(msg)
+    }
+    markDone()
+  })()
+
+  // Yield merged output
+  while (doneCount < totalSources || output.length > 0) {
+    while (output.length > 0) {
+      yield output.shift()!
+    }
+    if (doneCount < totalSources) {
+      await new Promise<void>((r) => { outputResolve = r })
+    }
   }
 }
 
@@ -206,7 +284,7 @@ export const codexAdapter: AgentAdapter = {
 
     let cancelled = false
     const state = { sawTurnCompleted: false }
-    const errorQueue: string[] = []
+    const errorChannel = createErrorChannel()
 
     // Eagerly scan for turn.completed via raw data listener.
     // This fires synchronously on data arrival, independent of the async
@@ -220,8 +298,8 @@ export const codexAdapter: AgentAdapter = {
 
     return {
       pid: child.pid!,
-      stdout: parseCodexStream(child.stdout, state, errorQueue),
-      stderr: streamStderr(child.stderr, errorQueue),
+      stdout: parseCodexStream(child.stdout, state, errorChannel),
+      stderr: streamStderr(child.stderr, errorChannel),
 
       wait(): Promise<AgentResult> {
         return new Promise((resolve) => {
@@ -229,6 +307,7 @@ export const codexAdapter: AgentAdapter = {
             let finishReason: AgentResult["finishReason"]
             let exitCode: number
             let commitSha: string | undefined
+            let errorMessage: string | undefined
 
             if (cancelled) {
               finishReason = "cancelled"
@@ -248,6 +327,7 @@ export const codexAdapter: AgentAdapter = {
                 // Commit failed — treat as failure to prevent stale SHA approval
                 finishReason = "failed"
                 exitCode = 1
+                errorMessage = `post-run commit failed: ${commitResult.message}`
               }
             } else {
               finishReason = "failed"
@@ -259,6 +339,7 @@ export const codexAdapter: AgentAdapter = {
               finishedAt: new Date(),
               finishReason,
               commitSha,
+              errorMessage,
             })
           })
         })

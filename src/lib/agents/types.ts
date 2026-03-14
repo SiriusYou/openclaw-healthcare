@@ -22,6 +22,7 @@ export interface AgentResult {
   readonly finishedAt: Date
   readonly finishReason: "completed" | "cancelled" | "failed" | "timeout"
   readonly commitSha?: string
+  readonly errorMessage?: string
 }
 
 export interface AgentAdapter {
