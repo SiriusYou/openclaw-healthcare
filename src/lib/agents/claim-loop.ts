@@ -192,24 +192,28 @@ async function runAgent(
   }
 
   if (attempt < MAX_AUTO_RETRIES + 1) {
-    // Auto-retry: new run inherits branch, baseBranch, baseCommitSha, worktreePath
-    const newRunId = nanoid()
-    const task = await db.query.tasks.findFirst({ where: eq(tasks.id, taskId) })
-    await db.insert(runs).values({
-      id: newRunId,
-      taskId,
-      agentKind: task?.agentKind ?? "fake",
-      status: "pending",
-      attempt: attempt + 1,
-      worktreePath,
-      branch,
-      baseBranch,
-      baseCommitSha,
-    })
-    await db.run(sql`
+    // Auto-retry: guard task status FIRST to prevent resurrecting cancelled tasks.
+    // If the task was cancelled between the run update and here, this is a no-op
+    // and we never insert the pending run.
+    const queued = await db.run(sql`
       UPDATE tasks SET status = 'queued', updated_at = unixepoch()
       WHERE id = ${taskId} AND status = 'in_progress'
     `)
+    if (queued.rowsAffected > 0) {
+      const newRunId = nanoid()
+      const task = await db.query.tasks.findFirst({ where: eq(tasks.id, taskId) })
+      await db.insert(runs).values({
+        id: newRunId,
+        taskId,
+        agentKind: task?.agentKind ?? "fake",
+        status: "pending",
+        attempt: attempt + 1,
+        worktreePath,
+        branch,
+        baseBranch,
+        baseCommitSha,
+      })
+    }
   } else {
     await db.run(sql`
       UPDATE tasks SET status = 'failed', updated_at = unixepoch()
@@ -222,7 +226,13 @@ export async function claimLoop(db: Db, getAdapter: () => AgentAdapter, workerPi
   try {
     const claimed = await db.run(sql`
       UPDATE runs SET status='claimed', claimed_at=unixepoch(), claimed_by=${workerPid}, heartbeat_at=unixepoch()
-      WHERE id = (SELECT id FROM runs WHERE status='pending' ORDER BY created_at ASC LIMIT 1)
+      WHERE id = (
+        SELECT r.id FROM runs r
+        JOIN tasks t ON r.task_id = t.id
+        WHERE r.status = 'pending'
+          AND t.status = 'queued'
+        ORDER BY r.created_at ASC LIMIT 1
+      )
       RETURNING *
     `)
 
