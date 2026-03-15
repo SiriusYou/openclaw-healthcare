@@ -5,14 +5,17 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { DiffPreview } from "@/components/diff-preview"
 
 interface Task {
   readonly id: string
   readonly title: string
+  readonly description: string | null
   readonly status: string | null
   readonly priority: string | null
   readonly mergeRequested: boolean | null
   readonly lastMergeError: string | null
+  readonly lastRejectReason: string | null
 }
 
 interface Run {
@@ -20,6 +23,8 @@ interface Run {
   readonly taskId: string | null
   readonly status: string | null
   readonly attempt: number | null
+  readonly agentKind: string | null
+  readonly headCommitSha: string | null
 }
 
 export default function ReviewsPage() {
@@ -95,30 +100,47 @@ export default function ReviewsPage() {
               {reviewTasks.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No tasks awaiting review.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {reviewTasks.map((task) => {
                     const latestRun = getLatestRun(task.id)
                     return (
-                      <div key={task.id} className="flex items-center justify-between rounded-md border p-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">{task.title}</p>
-                          {latestRun && (
-                            <Link
-                              href={`/dashboard/runs/${latestRun.id}`}
-                              className="text-xs text-muted-foreground hover:underline"
-                            >
-                              Run {latestRun.id.slice(0, 8)} (attempt {latestRun.attempt})
-                            </Link>
-                          )}
+                      <div key={task.id} className="rounded-md border p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <p className="font-medium">{task.title}</p>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground">{task.description}</p>
+                            )}
+                            {task.lastRejectReason && (
+                              <div className="rounded bg-destructive/10 px-2 py-1 text-xs text-destructive">
+                                Previously rejected: {task.lastRejectReason}
+                              </div>
+                            )}
+                            {latestRun && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Link
+                                  href={`/dashboard/runs/${latestRun.id}`}
+                                  className="hover:underline"
+                                >
+                                  Run {latestRun.id.slice(0, 8)}
+                                </Link>
+                                <span>attempt {latestRun.attempt}</span>
+                                {latestRun.agentKind && (
+                                  <Badge variant="outline">{latestRun.agentKind}</Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => handleApprove(task.id)}>
+                              Approve
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleReject(task.id)}>
+                              Reject
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleApprove(task.id)}>
-                            Approve
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleReject(task.id)}>
-                            Reject
-                          </Button>
-                        </div>
+                        {latestRun && <DiffPreview runId={latestRun.id} />}
                       </div>
                     )
                   })}
