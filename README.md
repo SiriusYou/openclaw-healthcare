@@ -44,6 +44,55 @@ Set `AGENT_ADAPTER` in `.env.local`:
 
 The worker validates the adapter at startup and will refuse to start if an unsupported adapter is selected or if the required CLI binary is missing.
 
+## Operator Runbook
+
+### Prerequisites
+
+- **Node.js 20+** and **bun** installed
+- For Codex adapter: `codex` CLI on PATH (install via `npm i -g @openai/codex`)
+- Git repo with a clean working tree (the worker creates worktrees under `~/.openclaw-worktrees/`)
+
+### Startup Modes
+
+| Mode | Command | Use Case |
+|------|---------|----------|
+| Development | `bun run dev:all` | Web (Turbopack HMR) + worker with concurrently |
+| Production | `bun run build && bun run start:all` | Optimized build + worker |
+| Worker only | `AGENT_ADAPTER=codex bun run worker` | Attach worker to an existing web console |
+| Web only | `bun run dev` | UI without agent execution |
+
+### Smoke Checklist
+
+After starting, verify the system is operational:
+
+1. Open `http://localhost:3000/dashboard` — should show the dashboard
+2. Create a task via Inbox → "New Task"
+3. Check worker output for `[claim-loop] claimed run ...`
+4. Wait for task to reach `awaiting_review` status
+5. Review the diff, approve or reject
+6. If approved, click Merge and verify the commit lands on the base branch
+
+### Recovery: Failed/Cancelled Tasks
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Task stuck in `in_progress` | Worker crashed mid-execution | Orphan loop auto-detects after 60s stale heartbeat → marks run `orphaned` → can retry via UI |
+| Task stuck in `queued` | No worker running | Start the worker: `bun run worker` |
+| Run in `stale_process_blocked` | Cleanup found a still-running agent process | Kill the stale process manually, then retry the run via the UI |
+| Run in `cleanup_pending` | Normal — cleanup loop will remove the worktree | Wait for cleanup loop (30s interval) or restart worker |
+| Merge fails repeatedly | Git conflict on base branch | Pull latest on base branch, resolve conflict manually, then re-approve |
+| Worker refuses to start | Unsupported `AGENT_ADAPTER` or missing binary | Check `.env.local` — only `fake` and `codex` are supported. For codex, ensure `codex` is on PATH |
+
+### Database
+
+SQLite database lives at `.data/openclaw.db`. To reset:
+
+```bash
+rm .data/openclaw.db
+bun run db:push        # recreate schema
+bun run db:bootstrap   # seed operator account
+```
+
 ## Known Issues
 
 - **Next.js 16 middleware deprecation**: Next 16 logs a warning about migrating `middleware.ts` to the new `proxy` convention. This is non-blocking and does not affect functionality.
