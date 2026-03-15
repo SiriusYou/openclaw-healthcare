@@ -31,6 +31,7 @@ const baseConfig = {
   taskId: "t1",
   runId: "r1",
   worktreePath: "/tmp/wt",
+  branch: "agent/t1",
   prompt: "test",
   attempt: 1,
 }
@@ -133,6 +134,7 @@ describe("fake adapter", () => {
       taskId: "my-task",
       runId: "my-run",
       worktreePath: "/my/path",
+      branch: "agent/my-task",
       prompt: "test",
       attempt: 3,
     })

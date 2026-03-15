@@ -19,7 +19,7 @@ describe("bootstrapTriggers", () => {
     await db.insert(events).values({
       eventId: nanoid(),
       taskId,
-      type: "task_created",
+      type: "log",
       payload: "{}",
     })
 

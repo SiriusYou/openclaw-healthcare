@@ -15,6 +15,7 @@ describe("claude adapter", () => {
       taskId: "t1",
       runId: "r1",
       worktreePath: "/tmp/wt",
+      branch: "agent/t1",
       prompt: "test",
       attempt: 1,
     })).toThrow("not implemented")
