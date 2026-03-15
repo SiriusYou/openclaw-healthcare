@@ -9,6 +9,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     globalSetup: ["./vitest.global-setup.ts"],
+    fileParallelism: false,
     exclude: ["e2e/**", "node_modules/**"],
     env: {
       DATABASE_URL: TEST_DATABASE_URL,

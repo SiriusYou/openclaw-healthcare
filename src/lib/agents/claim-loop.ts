@@ -236,7 +236,7 @@ export async function claimLoop(db: Db, getAdapter: () => AgentAdapter, workerPi
       RETURNING *
     `)
 
-    if (claimed.rowsAffected === 0) return
+    if (!claimed.rows || claimed.rows.length === 0) return
 
     const row = claimed.rows[0] as Record<string, unknown>
     const runId = row.id as string

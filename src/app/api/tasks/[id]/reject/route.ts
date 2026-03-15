@@ -39,6 +39,7 @@ export async function POST(
     await db.insert(events).values({
       eventId: nanoid(),
       runId: latestRun.id,
+      taskId: id,
       type: "review_rejected",
       payload: JSON.stringify({ reason: reason ?? "No reason provided" }),
     })

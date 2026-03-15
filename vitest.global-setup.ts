@@ -15,10 +15,28 @@ export default async function globalSetup() {
   runOrDie("bun", ["run", "db:bootstrap"])
 
   // Truncate all tables for clean test state (FK order: events → runs → tasks)
+  // Must drop append-only triggers before deleting events (bootstrap recreates them)
   const { createClient } = await import("@libsql/client")
   const client = createClient({ url: TEST_DATABASE_URL })
+  await client.execute("DROP TRIGGER IF EXISTS events_no_delete")
+  await client.execute("DROP TRIGGER IF EXISTS events_no_update")
   await client.execute("DELETE FROM events")
   await client.execute("DELETE FROM runs")
   await client.execute("DELETE FROM tasks")
+  // Recreate triggers
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS events_no_update
+    BEFORE UPDATE ON events
+    BEGIN
+      SELECT RAISE(ABORT, 'events table is append-only');
+    END
+  `)
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS events_no_delete
+    BEFORE DELETE ON events
+    BEGIN
+      SELECT RAISE(ABORT, 'events table is append-only');
+    END
+  `)
   client.close()
 }

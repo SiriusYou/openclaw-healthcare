@@ -19,6 +19,8 @@ interface RunDetail {
   readonly createdAt: string | null
   readonly startedAt: string | null
   readonly finishedAt: string | null
+  readonly baseCommitSha: string | null
+  readonly headCommitSha: string | null
 }
 
 interface TaskDetail {
@@ -27,6 +29,7 @@ interface TaskDetail {
   readonly status: string | null
   readonly mergeRequested: boolean | null
   readonly lastMergeError: string | null
+  readonly lastRejectReason: string | null
 }
 
 interface EventEntry {
@@ -53,6 +56,8 @@ export default function RunDetailPage() {
   const [task, setTask] = useState<TaskDetail | null>(null)
   const [events, setEvents] = useState<readonly EventEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [diffData, setDiffData] = useState<{ stat: string; diff: string } | null>(null)
+  const [diffLoading, setDiffLoading] = useState(false)
   const logEndRef = useRef<HTMLDivElement>(null)
 
   const fetchRun = useCallback(async () => {
@@ -114,6 +119,19 @@ export default function RunDetailPage() {
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [events])
+
+  async function handleViewDiff() {
+    if (!run) return
+    setDiffLoading(true)
+    try {
+      const res = await fetch(`/api/runs/${runId}/diff`)
+      if (res.ok) {
+        setDiffData(await res.json())
+      }
+    } finally {
+      setDiffLoading(false)
+    }
+  }
 
   async function handleApprove() {
     if (!run?.taskId) return
@@ -198,6 +216,30 @@ export default function RunDetailPage() {
         </Card>
       )}
 
+      {(run.baseCommitSha || run.headCommitSha) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Commits</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {run.baseCommitSha && (
+              <div><span className="text-xs text-muted-foreground">Base:</span> <code className="text-xs">{run.baseCommitSha.slice(0, 12)}</code></div>
+            )}
+            {run.headCommitSha && (
+              <div><span className="text-xs text-muted-foreground">Head:</span> <code className="text-xs">{run.headCommitSha.slice(0, 12)}</code></div>
+            )}
+            {run.baseCommitSha && run.headCommitSha && (
+              <Button variant="outline" size="sm" onClick={handleViewDiff} disabled={diffLoading}>
+                {diffLoading ? "Loading..." : "View Diff"}
+              </Button>
+            )}
+            {diffData && (
+              <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-muted p-3 text-xs">{diffData.stat}{"\n\n"}{diffData.diff}</pre>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {["failed", "succeeded", "cancelled", "orphaned"].includes(run.status ?? "") && run.finishReason && (
         <Card>
           <CardHeader className="pb-2">
@@ -248,6 +290,17 @@ export default function RunDetailPage() {
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {task?.lastRejectReason && (
+        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Previous Rejection</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-yellow-700 dark:text-yellow-300">{task.lastRejectReason}</p>
           </CardContent>
         </Card>
       )}

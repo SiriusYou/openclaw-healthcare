@@ -39,7 +39,20 @@ export async function GET(request: NextRequest) {
         } catch { /* ignore */ }
       }
     }
-    return { ...task, lastMergeError }
+    let lastRejectReason: string | null = null
+    if (["queued", "assigned", "in_progress", "awaiting_review"].includes(task.status ?? "")) {
+      const rejectEvent = await db.select().from(events)
+        .where(and(eq(events.taskId, task.id), eq(events.type, "review_rejected")))
+        .orderBy(desc(events.id))
+        .limit(1)
+      if (rejectEvent.length > 0 && rejectEvent[0].payload) {
+        try {
+          const parsed = JSON.parse(rejectEvent[0].payload)
+          lastRejectReason = parsed.reason ?? null
+        } catch { /* ignore */ }
+      }
+    }
+    return { ...task, lastMergeError, lastRejectReason }
   }))
 
   return json(enriched)
