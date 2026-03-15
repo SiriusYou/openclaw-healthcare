@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import { runs, tasks } from "@/lib/db/schema"
 import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
-import { MAX_AUTO_RETRIES } from "@/lib/agents/constants"
+import { MAX_AUTO_RETRIES, getValidatedAdapterKind } from "@/lib/agents/constants"
 import { json, error } from "@/lib/api-utils"
 
 export async function POST(
@@ -46,6 +46,11 @@ export async function POST(
   const task = await db.query.tasks.findFirst({ where: eq(tasks.id, run.taskId) })
   if (!task) return error("Task not found", 404)
 
+  const validAdapter = getValidatedAdapterKind()
+  if (!validAdapter) {
+    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: fake, codex`, 400)
+  }
+
   // Create new run atomically
   const newRunId = nanoid()
   const nextAttempt = (run.attempt ?? 0) + 1
@@ -54,7 +59,7 @@ export async function POST(
     db.insert(runs).values({
       id: newRunId,
       taskId: run.taskId,
-      agentKind: task.agentKind as "codex" | "claude" | "gemini" | "fake",
+      agentKind: validAdapter,
       status: "pending",
       attempt: nextAttempt,
       worktreePath: run.worktreePath,

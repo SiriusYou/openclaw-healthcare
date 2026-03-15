@@ -74,6 +74,7 @@ interface RunOverrides {
   readonly finishReason?: "completed" | "cancelled" | "failed" | "timeout" | "stale_process_blocked" | null
   readonly exitCode?: number | null
   readonly heartbeatAt?: Date | null
+  readonly claimedBy?: string | null
   readonly claimedAt?: Date | null
   readonly startedAt?: Date | null
   readonly finishedAt?: Date | null
@@ -96,6 +97,7 @@ export async function createTestRun(database: Db, taskId: string, overrides: Run
     finishReason: overrides.finishReason ?? null,
     exitCode: overrides.exitCode ?? null,
     heartbeatAt: overrides.heartbeatAt ?? null,
+    claimedBy: overrides.claimedBy ?? null,
     claimedAt: overrides.claimedAt ?? null,
     startedAt: overrides.startedAt ?? null,
     finishedAt: overrides.finishedAt ?? null,

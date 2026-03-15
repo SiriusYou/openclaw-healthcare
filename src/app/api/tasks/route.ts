@@ -5,6 +5,7 @@ import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import { json, error, getLatestEventField } from "@/lib/api-utils"
+import { getValidatedAdapterKind } from "@/lib/agents/constants"
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(500),
@@ -49,7 +50,10 @@ export async function POST(request: NextRequest) {
   }
 
   const { title, description, priority, autoRun } = parsed.data
-  const agentKind = (process.env.AGENT_ADAPTER ?? "fake") as "codex" | "claude" | "gemini" | "fake"
+  const agentKind = getValidatedAdapterKind()
+  if (!agentKind) {
+    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: fake, codex`, 400)
+  }
 
   const taskId = nanoid()
   const task = {

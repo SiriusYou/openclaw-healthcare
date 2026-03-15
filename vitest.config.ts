@@ -26,9 +26,9 @@ export default defineConfig({
         "src/lib/db/e2e-prepare.ts",
       ],
       thresholds: {
-        lines: 15,
-        branches: 15,
-        functions: 20,
+        lines: 25,
+        branches: 25,
+        functions: 30,
       },
     },
   },

@@ -5,6 +5,7 @@ import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import { json, error } from "@/lib/api-utils"
+import { getValidatedAdapterKind } from "@/lib/agents/constants"
 
 const rejectSchema = z.object({
   reason: z.string().optional(),
@@ -17,6 +18,11 @@ export async function POST(
   const { id } = await params
   const task = await db.query.tasks.findFirst({ where: eq(tasks.id, id) })
   if (!task) return error("Task not found", 404)
+
+  const validAdapter = getValidatedAdapterKind()
+  if (!validAdapter) {
+    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: fake, codex`, 400)
+  }
 
   if (task.status !== "awaiting_review") {
     return error(`Cannot reject task in status '${task.status}'`, 409)
@@ -50,7 +56,7 @@ export async function POST(
   await db.insert(runs).values({
     id: newRunId,
     taskId: id,
-    agentKind: task.agentKind as "codex" | "claude" | "gemini" | "fake",
+    agentKind: validAdapter,
     status: "pending",
     attempt: nextAttempt,
     worktreePath: latestRun?.worktreePath,

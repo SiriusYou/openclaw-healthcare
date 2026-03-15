@@ -1,9 +1,9 @@
 import { db } from "../db/index"
 import { writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
 import { fakeAdapter } from "./fake-adapter"
 import { codexAdapter } from "./codex-adapter"
-import { claudeAdapter } from "./claude-adapter"
-import { getHeartbeatPath } from "./constants"
+import { getHeartbeatPath, SUPPORTED_ADAPTERS, type SupportedAdapter } from "./constants"
 import { DEFAULT_DATABASE_URL } from "../db/constants"
 import type { AgentAdapter } from "./types"
 import { claimLoop } from "./claim-loop"
@@ -24,11 +24,24 @@ const dbUrl = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL
 const heartbeatPath = getHeartbeatPath(dbUrl)
 const workerPid = String(process.pid)
 
+/* ── Preflight: validate adapter name + binary ── */
+const adapterKind = (process.env.AGENT_ADAPTER ?? "fake") as string
+if (!SUPPORTED_ADAPTERS.includes(adapterKind as SupportedAdapter)) {
+  console.error(`[worker] FATAL: unsupported AGENT_ADAPTER="${adapterKind}". Supported: ${SUPPORTED_ADAPTERS.join(", ")}`)
+  process.exit(1)
+}
+if (adapterKind === "codex") {
+  try {
+    execFileSync("which", ["codex"], { stdio: "pipe" })
+  } catch {
+    console.error("[worker] FATAL: codex CLI not found on PATH")
+    process.exit(1)
+  }
+}
+
 function getAdapter(): AgentAdapter {
-  const kind = process.env.AGENT_ADAPTER ?? "fake"
-  switch (kind) {
+  switch (adapterKind) {
     case "codex": return codexAdapter
-    case "claude": return claudeAdapter
     default: return fakeAdapter
   }
 }

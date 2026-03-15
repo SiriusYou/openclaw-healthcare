@@ -365,7 +365,38 @@ describe("Task lifecycle API", () => {
     expect(found.lastRejectReason).toBe("missing edge case")
   })
 
-  it("18. Diff endpoint success path returns stat and diff", async () => {
+  it("18. Create task with unsupported AGENT_ADAPTER returns 400", async () => {
+    const original = process.env.AGENT_ADAPTER
+    process.env.AGENT_ADAPTER = "claude"
+
+    const res = await createTask(
+      postJson("/api/tasks", { title: "Test", autoRun: true }),
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain("Unsupported")
+
+    process.env.AGENT_ADAPTER = original
+  })
+
+  it("19. Create run with unsupported AGENT_ADAPTER returns 400", async () => {
+    const task = await createTestTask(db, { status: "draft" })
+    const original = process.env.AGENT_ADAPTER
+    process.env.AGENT_ADAPTER = "gemini"
+
+    const res = await createRun(
+      postJson("/api/runs", { taskId: task.id }),
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain("Unsupported")
+
+    process.env.AGENT_ADAPTER = original
+  })
+
+  it("20. Diff endpoint success path returns stat and diff", async () => {
     // Use HEAD for both SHAs (empty diff) — safe in shallow CI clones
     // where HEAD~1 may not exist (fetch-depth: 1)
     const { execFileSync } = await import("node:child_process")

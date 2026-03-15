@@ -5,6 +5,7 @@ import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import { json, error } from "@/lib/api-utils"
+import { getValidatedAdapterKind } from "@/lib/agents/constants"
 
 const createRunSchema = z.object({
   taskId: z.string().min(1),
@@ -46,7 +47,10 @@ export async function POST(request: NextRequest) {
     return error("Task already has an active run", 409)
   }
 
-  const agentKind = task.agentKind as "codex" | "claude" | "gemini" | "fake"
+  const agentKind = getValidatedAdapterKind()
+  if (!agentKind) {
+    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: fake, codex`, 400)
+  }
   const nextAttempt = activeRun ? (activeRun.attempt ?? 0) + 1 : 1
 
   const runId = nanoid()

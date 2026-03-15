@@ -1,6 +1,6 @@
 # OpenClaw Agent Swarm
 
-Local console for orchestrating AI coding agents. Dispatch tasks to Codex, Claude, or Gemini agents running in git worktrees, review their output, and merge approved changes.
+Local console for orchestrating AI coding agents. Dispatch tasks to agents running in git worktrees, review their output, and merge approved changes.
 
 ## Quick Start
 
@@ -35,9 +35,18 @@ bun run dev:all    # starts web console + runner worker
 
 Set `AGENT_ADAPTER` in `.env.local`:
 
-- `fake` (default): Test adapter, creates a file and exits
-- `codex`: OpenAI Codex CLI
-- `claude`: Claude Code CLI
+| Adapter | Status | Description |
+|---------|--------|-------------|
+| `fake` | **Supported** (default) | Test adapter — creates a file and exits |
+| `codex` | **Supported** | OpenAI Codex CLI (`codex` binary must be on PATH) |
+| `claude` | Stub | Forward-compatibility enum value; not a valid operator target |
+| `gemini` | Stub | Forward-compatibility enum value; not a valid operator target |
+
+The worker validates the adapter at startup and will refuse to start if an unsupported adapter is selected or if the required CLI binary is missing.
+
+## Known Issues
+
+- **Next.js 16 middleware deprecation**: Next 16 logs a warning about migrating `middleware.ts` to the new `proxy` convention. This is non-blocking and does not affect functionality.
 
 ## License
 

@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
+import { index } from "drizzle-orm/sqlite-core"
 import { sql } from "drizzle-orm"
 
 export const tasks = sqliteTable("tasks", {
@@ -23,7 +24,9 @@ export const tasks = sqliteTable("tasks", {
   approvedCommitSha: text("approved_commit_sha"),
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
-})
+}, (t) => [
+  index("tasks_status_idx").on(t.status),
+])
 
 export const runs = sqliteTable("runs", {
   id: text("id").primaryKey(),
@@ -54,7 +57,10 @@ export const runs = sqliteTable("runs", {
   startedAt: integer("started_at", { mode: "timestamp" }),
   finishedAt: integer("finished_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
-})
+}, (t) => [
+  index("runs_status_created_idx").on(t.status, t.createdAt),
+  index("runs_task_id_idx").on(t.taskId),
+])
 
 export const events = sqliteTable("events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -69,4 +75,7 @@ export const events = sqliteTable("events", {
   }),
   payload: text("payload"),
   timestamp: integer("timestamp", { mode: "timestamp" }).default(sql`(unixepoch())`),
-})
+}, (t) => [
+  index("events_run_id_idx").on(t.runId, t.id),
+  index("events_task_type_idx").on(t.taskId, t.type, t.id),
+])
