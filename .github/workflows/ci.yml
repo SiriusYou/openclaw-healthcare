@@ -10,6 +10,14 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    env:
+      AUTH_SECRET: ci-test-secret-not-for-production
+      AUTH_TRUST_HOST: "true"
+      OPERATOR_EMAIL: test@ci.local
+      OPERATOR_PASSWORD: ci-test-password
+      AGENT_ADAPTER: fake
+      DATABASE_URL: "file:.data/ci-test.db"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,9 +37,14 @@ jobs:
       - name: Test
         run: bun run test
 
-      - name: Coverage (soft gate)
+      - name: Coverage
         run: bun run test:coverage
-        continue-on-error: true
 
       - name: Build
         run: bun run build
+
+      - name: Install Playwright
+        run: bunx playwright install --with-deps chromium
+
+      - name: E2E tests
+        run: bunx playwright test

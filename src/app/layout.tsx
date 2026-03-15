@@ -15,8 +15,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "OpenClaw Healthcare",
-  description: "Healthcare management platform",
+  title: "OpenClaw Agent Swarm",
+  description: "Local console for orchestrating AI coding agents",
 };
 
 export default function RootLayout({

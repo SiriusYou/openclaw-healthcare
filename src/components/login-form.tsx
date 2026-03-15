@@ -51,7 +51,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">OpenClaw Healthcare</CardTitle>
+        <CardTitle className="text-2xl">OpenClaw Agent Swarm</CardTitle>
         <CardDescription>Sign in to your account</CardDescription>
       </CardHeader>
       <CardContent>
@@ -83,7 +83,7 @@ export function LoginForm() {
             {loading ? "Signing in..." : "Sign in"}
           </Button>
           <p className="text-xs text-muted-foreground text-center">
-            Demo: admin@openclaw.com / admin123
+            Use your operator credentials from .env.local
           </p>
         </form>
       </CardContent>
