@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server"
 import { db } from "@/lib/db"
-import { tasks, runs, events } from "@/lib/db/schema"
-import { eq, desc, and } from "drizzle-orm"
+import { tasks, runs } from "@/lib/db/schema"
+import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
-import { json, error } from "@/lib/api-utils"
+import { json, error, getLatestEventField } from "@/lib/api-utils"
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(500),
@@ -26,32 +26,14 @@ export async function GET(request: NextRequest) {
         .orderBy(desc(tasks.createdAt)).limit(limit)
 
   const enriched = await Promise.all(result.map(async (task) => {
-    let lastMergeError: string | null = null
-    if (task.status === "pr_ready") {
-      const mergeEvent = await db.select().from(events)
-        .where(and(eq(events.taskId, task.id), eq(events.type, "merge_result")))
-        .orderBy(desc(events.id))
-        .limit(1)
-      if (mergeEvent.length > 0 && mergeEvent[0].payload) {
-        try {
-          const parsed = JSON.parse(mergeEvent[0].payload)
-          lastMergeError = parsed.message ?? null
-        } catch { /* ignore */ }
-      }
-    }
-    let lastRejectReason: string | null = null
-    if (["queued", "assigned", "in_progress", "awaiting_review"].includes(task.status ?? "")) {
-      const rejectEvent = await db.select().from(events)
-        .where(and(eq(events.taskId, task.id), eq(events.type, "review_rejected")))
-        .orderBy(desc(events.id))
-        .limit(1)
-      if (rejectEvent.length > 0 && rejectEvent[0].payload) {
-        try {
-          const parsed = JSON.parse(rejectEvent[0].payload)
-          lastRejectReason = parsed.reason ?? null
-        } catch { /* ignore */ }
-      }
-    }
+    const [lastMergeError, lastRejectReason] = await Promise.all([
+      task.status === "pr_ready"
+        ? getLatestEventField(task.id, "merge_result", "message")
+        : null,
+      ["queued", "assigned", "in_progress", "awaiting_review"].includes(task.status ?? "")
+        ? getLatestEventField(task.id, "review_rejected", "reason")
+        : null,
+    ])
     return { ...task, lastMergeError, lastRejectReason }
   }))
 

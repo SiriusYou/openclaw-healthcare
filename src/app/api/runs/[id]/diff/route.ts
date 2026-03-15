@@ -18,15 +18,11 @@ export async function GET(
   }
 
   try {
-    const stat = execFileSync(
-      "git", ["diff", `${run.baseCommitSha}...${run.headCommitSha}`, "--stat"],
-      { encoding: "utf-8", stdio: "pipe" }
-    ).trim()
+    const range = `${run.baseCommitSha}...${run.headCommitSha}`
+    const opts = { encoding: "utf-8" as const, stdio: "pipe" as const }
 
-    const diff = execFileSync(
-      "git", ["diff", `${run.baseCommitSha}...${run.headCommitSha}`],
-      { encoding: "utf-8", stdio: "pipe" }
-    ).trim()
+    const stat = execFileSync("git", ["diff", range, "--stat"], opts).trim()
+    const diff = execFileSync("git", ["diff", range], opts).trim()
 
     return json({
       stat,

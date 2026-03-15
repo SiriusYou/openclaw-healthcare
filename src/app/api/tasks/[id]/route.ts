@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server"
 import { db } from "@/lib/db"
-import { tasks, runs, events } from "@/lib/db/schema"
-import { eq, and, inArray, desc } from "drizzle-orm"
+import { tasks, runs } from "@/lib/db/schema"
+import { eq, and, inArray } from "drizzle-orm"
 import { z } from "zod"
-import { json, error } from "@/lib/api-utils"
+import { json, error, getLatestEventField } from "@/lib/api-utils"
 
 export async function GET(
   _request: NextRequest,
@@ -13,32 +13,15 @@ export async function GET(
   const task = await db.query.tasks.findFirst({ where: eq(tasks.id, id) })
   if (!task) return error("Task not found", 404)
 
-  let lastMergeError: string | null = null
-  if (task.status === "pr_ready") {
-    const mergeEvent = await db.select().from(events)
-      .where(and(eq(events.taskId, id), eq(events.type, "merge_result")))
-      .orderBy(desc(events.id))
-      .limit(1)
-    if (mergeEvent.length > 0 && mergeEvent[0].payload) {
-      try {
-        const parsed = JSON.parse(mergeEvent[0].payload)
-        lastMergeError = parsed.message ?? null
-      } catch { /* ignore */ }
-    }
-  }
-  let lastRejectReason: string | null = null
-  if (["queued", "assigned", "in_progress", "awaiting_review"].includes(task.status ?? "")) {
-    const rejectEvent = await db.select().from(events)
-      .where(and(eq(events.taskId, id), eq(events.type, "review_rejected")))
-      .orderBy(desc(events.id))
-      .limit(1)
-    if (rejectEvent.length > 0 && rejectEvent[0].payload) {
-      try {
-        const parsed = JSON.parse(rejectEvent[0].payload)
-        lastRejectReason = parsed.reason ?? null
-      } catch { /* ignore */ }
-    }
-  }
+  const [lastMergeError, lastRejectReason] = await Promise.all([
+    task.status === "pr_ready"
+      ? getLatestEventField(id, "merge_result", "message")
+      : null,
+    ["queued", "assigned", "in_progress", "awaiting_review"].includes(task.status ?? "")
+      ? getLatestEventField(id, "review_rejected", "reason")
+      : null,
+  ])
+
   return json({ ...task, lastMergeError, lastRejectReason })
 }
 

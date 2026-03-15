@@ -7,6 +7,7 @@ import {
   createTestTask,
   createTestRun,
   createMockAdapter,
+  mockProcessKill,
   waitForRunStatus,
 } from "./test-helpers"
 import { claimLoop } from "../claim-loop"
@@ -27,9 +28,7 @@ describe("claimLoop", () => {
   })
 
   it("happy path: pending run → succeeded → task awaiting_review", async () => {
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => {
-      throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
-    })
+    const killSpy = mockProcessKill()
 
     const task = await createTestTask(db, { status: "queued" })
     const run = await createTestRun(db, task.id, { status: "pending", attempt: 1 })
@@ -65,7 +64,7 @@ describe("claimLoop", () => {
 
   it("stale process blocks: living PID fails run with stale_process_blocked", async () => {
     // process.kill(pid, 0) NOT throwing means process is alive
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => true)
+    const killSpy = mockProcessKill(true)
 
     const task = await createTestTask(db, { status: "queued" })
     await createTestRun(db, task.id, {
@@ -94,9 +93,7 @@ describe("claimLoop", () => {
   })
 
   it("stale process dead (ESRCH): proceeds normally", async () => {
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => {
-      throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
-    })
+    const killSpy = mockProcessKill()
 
     const task = await createTestTask(db, { status: "queued" })
     await createTestRun(db, task.id, {
@@ -123,9 +120,7 @@ describe("claimLoop", () => {
   })
 
   it("adapter.start() throws (retries exhausted, attempt=3): run failed, task failed", async () => {
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => {
-      throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
-    })
+    const killSpy = mockProcessKill()
 
     const task = await createTestTask(db, { status: "queued" })
     const run = await createTestRun(db, task.id, { status: "pending", attempt: 3 })
@@ -146,9 +141,7 @@ describe("claimLoop", () => {
   })
 
   it("adapter.start() throws (retries remaining, attempt=1): run failed, task stays in_progress", async () => {
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => {
-      throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
-    })
+    const killSpy = mockProcessKill()
 
     const task = await createTestTask(db, { status: "queued" })
     const run = await createTestRun(db, task.id, { status: "pending", attempt: 1 })
@@ -170,9 +163,7 @@ describe("claimLoop", () => {
   })
 
   it("handle.wait() throws (retries exhausted, attempt=3): run failed, task failed", async () => {
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => {
-      throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
-    })
+    const killSpy = mockProcessKill()
 
     const task = await createTestTask(db, { status: "queued" })
     const run = await createTestRun(db, task.id, { status: "pending", attempt: 3 })
@@ -192,9 +183,7 @@ describe("claimLoop", () => {
   })
 
   it("handle.wait() throws (retries remaining, attempt=1): run failed, task stays in_progress", async () => {
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => {
-      throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
-    })
+    const killSpy = mockProcessKill()
 
     const task = await createTestTask(db, { status: "queued" })
     const run = await createTestRun(db, task.id, { status: "pending", attempt: 1 })
@@ -214,9 +203,7 @@ describe("claimLoop", () => {
   })
 
   it("auto-retry on failure: attempt=1 with exitCode=1 creates new pending run", async () => {
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => {
-      throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
-    })
+    const killSpy = mockProcessKill()
 
     const task = await createTestTask(db, { status: "queued" })
     const run = await createTestRun(db, task.id, { status: "pending", attempt: 1 })
@@ -247,9 +234,7 @@ describe("claimLoop", () => {
   })
 
   it("auto-retry guard: cancelled task blocks retry insertion", async () => {
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => {
-      throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
-    })
+    const killSpy = mockProcessKill()
 
     const task = await createTestTask(db, { status: "queued" })
     const run = await createTestRun(db, task.id, { status: "pending", attempt: 1 })
@@ -292,9 +277,7 @@ describe("claimLoop", () => {
   })
 
   it("atomic cancel guard: run cancelled during execution prevents result write", async () => {
-    const killSpy = vi.spyOn(process, "kill").mockImplementation(() => {
-      throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
-    })
+    const killSpy = mockProcessKill()
 
     const task = await createTestTask(db, { status: "queued" })
     const run = await createTestRun(db, task.id, { status: "pending", attempt: 1 })

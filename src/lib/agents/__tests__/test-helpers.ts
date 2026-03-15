@@ -1,3 +1,4 @@
+import { vi } from "vitest"
 import { db } from "../../db/index"
 import { tasks, runs, events } from "../../db/schema"
 import { eq, sql } from "drizzle-orm"
@@ -136,6 +137,17 @@ export function createMockAdapter(behavior: MockAdapterBehavior = {}): AgentAdap
       }
     },
   }
+}
+
+/**
+ * Mock process.kill to simulate dead (ESRCH) or alive processes.
+ * Returns the spy — call `spy.mockRestore()` in afterEach or test end.
+ */
+export function mockProcessKill(alive = false) {
+  return vi.spyOn(process, "kill").mockImplementation(() => {
+    if (alive) return true
+    throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" })
+  })
 }
 
 /**
