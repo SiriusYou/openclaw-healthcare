@@ -9,7 +9,7 @@ import {
   createTestTask,
   createTestRun,
 } from "@/lib/agents/__tests__/test-helpers"
-import { POST as createTask } from "@/app/api/tasks/route"
+import { POST as createTask, GET as listTasks } from "@/app/api/tasks/route"
 import { GET as getTask, PATCH as patchTask } from "@/app/api/tasks/[id]/route"
 import { POST as approveTask } from "@/app/api/tasks/[id]/approve/route"
 import { POST as rejectTask } from "@/app/api/tasks/[id]/reject/route"
@@ -346,5 +346,47 @@ describe("Task lifecycle API", () => {
     )
     const data = await res.json()
     expect(data.lastRejectReason).toBe("needs more tests")
+  })
+
+  it("17. lastRejectReason projected in task list", async () => {
+    const task = await createTestTask(db, { status: "awaiting_review" })
+    await createTestRun(db, task.id, { status: "succeeded", attempt: 1 })
+
+    await rejectTask(
+      postJson(`/api/tasks/${task.id}/reject`, { reason: "missing edge case" }),
+      makeParams(task.id),
+    )
+
+    // List tasks should include lastRejectReason
+    const res = await listTasks(getReq("/api/tasks"))
+    const data = await res.json()
+    const found = data.find((t: { id: string }) => t.id === task.id)
+    expect(found).toBeDefined()
+    expect(found.lastRejectReason).toBe("missing edge case")
+  })
+
+  it("18. Diff endpoint success path returns stat and diff", async () => {
+    // Use two real commits from the repo for a valid diff
+    const { execFileSync } = await import("node:child_process")
+    const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).trim()
+    const parent = execFileSync("git", ["rev-parse", "HEAD~1"], { encoding: "utf-8" }).trim()
+
+    const task = await createTestTask(db, { status: "in_progress" })
+    const run = await createTestRun(db, task.id, {
+      status: "succeeded",
+      baseCommitSha: parent,
+      headCommitSha: head,
+    })
+
+    const res = await getDiff(
+      getReq(`/api/runs/${run.id}/diff`),
+      makeParams(run.id),
+    )
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.baseCommitSha).toBe(parent)
+    expect(data.headCommitSha).toBe(head)
+    expect(typeof data.stat).toBe("string")
+    expect(typeof data.diff).toBe("string")
   })
 })
