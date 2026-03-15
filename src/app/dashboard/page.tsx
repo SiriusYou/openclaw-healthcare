@@ -5,6 +5,7 @@ import { tasks, runs } from "@/lib/db/schema"
 import { eq, inArray, desc } from "drizzle-orm"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { WorkerHealthWidget } from "@/components/worker-health-widget"
 
 const ACTIVE_TASK_STATUSES = ["queued", "assigned", "in_progress", "awaiting_review", "pr_ready"] as const
 const ACTIVE_RUN_STATUSES = ["pending", "claimed", "running"] as const
@@ -45,7 +46,8 @@ export default async function DashboardPage() {
         <p className="text-muted-foreground">Agent Swarm overview.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
+        <WorkerHealthWidget />
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active Tasks</CardTitle>
