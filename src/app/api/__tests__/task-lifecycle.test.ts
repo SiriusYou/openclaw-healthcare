@@ -16,6 +16,7 @@ import { POST as rejectTask } from "@/app/api/tasks/[id]/reject/route"
 import { POST as mergeTask } from "@/app/api/tasks/[id]/merge/route"
 import { POST as createRun } from "@/app/api/runs/route"
 import { GET as getDiff } from "@/app/api/runs/[id]/diff/route"
+import { POST as retryRun } from "@/app/api/runs/[id]/retry/route"
 
 function makeParams(id: string) {
   return { params: Promise.resolve({ id }) }
@@ -396,7 +397,48 @@ describe("Task lifecycle API", () => {
     process.env.AGENT_ADAPTER = original
   })
 
-  it("20. Diff endpoint success path returns stat and diff", async () => {
+  it("20. Reject with unsupported AGENT_ADAPTER returns 400", async () => {
+    const task = await createTestTask(db, { status: "awaiting_review" })
+    await createTestRun(db, task.id, { status: "succeeded", attempt: 1 })
+
+    const original = process.env.AGENT_ADAPTER
+    process.env.AGENT_ADAPTER = "claude"
+
+    const res = await rejectTask(
+      postJson(`/api/tasks/${task.id}/reject`, { reason: "needs work" }),
+      makeParams(task.id),
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain("Unsupported")
+
+    process.env.AGENT_ADAPTER = original
+  })
+
+  it("21. Retry with unsupported AGENT_ADAPTER returns 400", async () => {
+    const task = await createTestTask(db, { status: "failed" })
+    const run = await createTestRun(db, task.id, {
+      status: "orphaned",
+      attempt: 1,
+    })
+
+    const original = process.env.AGENT_ADAPTER
+    process.env.AGENT_ADAPTER = "gemini"
+
+    const res = await retryRun(
+      postJson(`/api/runs/${run.id}/retry`, {}),
+      makeParams(run.id),
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain("Unsupported")
+
+    process.env.AGENT_ADAPTER = original
+  })
+
+  it("22. Diff endpoint success path returns stat and diff", async () => {
     // Use HEAD for both SHAs (empty diff) — safe in shallow CI clones
     // where HEAD~1 may not exist (fetch-depth: 1)
     const { execFileSync } = await import("node:child_process")
