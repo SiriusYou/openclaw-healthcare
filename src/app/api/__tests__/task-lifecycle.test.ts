@@ -366,15 +366,15 @@ describe("Task lifecycle API", () => {
   })
 
   it("18. Diff endpoint success path returns stat and diff", async () => {
-    // Use two real commits from the repo for a valid diff
+    // Use HEAD for both SHAs (empty diff) — safe in shallow CI clones
+    // where HEAD~1 may not exist (fetch-depth: 1)
     const { execFileSync } = await import("node:child_process")
     const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).trim()
-    const parent = execFileSync("git", ["rev-parse", "HEAD~1"], { encoding: "utf-8" }).trim()
 
     const task = await createTestTask(db, { status: "in_progress" })
     const run = await createTestRun(db, task.id, {
       status: "succeeded",
-      baseCommitSha: parent,
+      baseCommitSha: head,
       headCommitSha: head,
     })
 
@@ -384,7 +384,7 @@ describe("Task lifecycle API", () => {
     )
     expect(res.status).toBe(200)
     const data = await res.json()
-    expect(data.baseCommitSha).toBe(parent)
+    expect(data.baseCommitSha).toBe(head)
     expect(data.headCommitSha).toBe(head)
     expect(typeof data.stat).toBe("string")
     expect(typeof data.diff).toBe("string")

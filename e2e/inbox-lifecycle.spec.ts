@@ -67,7 +67,10 @@ test("task lifecycle: create → complete → approve → merge", async ({ page 
   await page.getByRole("link", { name: "Inbox" }).first().click()
   await expect(page.getByTestId("inbox-root")).toBeVisible()
 
-  // 14. Verify task appears in Completed section with 'merged' badge
+  // 14. Verify task appears in Completed section with 'merged' or 'cleaned' badge.
+  // cleanup-loop can promote merged→cleaned within ~30s, so accept either.
   const mergedRow = taskRow(page, taskTitle)
-  await expect(mergedRow.getByText("merged")).toBeVisible({ timeout: 30_000 })
+  await expect(
+    mergedRow.getByText(/^(merged|cleaned)$/)
+  ).toBeVisible({ timeout: 30_000 })
 })
