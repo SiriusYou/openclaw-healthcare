@@ -14,27 +14,46 @@ test("task lifecycle: create → complete → approve → merge", async ({ page 
   await page.getByTestId("queue-and-run-btn").click()
 
   // 3. Wait for task to appear with 'queued' status
-  await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 5_000 })
-  await expect(page.getByText("queued")).toBeVisible({ timeout: 5_000 })
+  const taskRow = page.locator("div.border", { hasText: taskTitle })
+  await expect(taskRow).toBeVisible({ timeout: 5_000 })
+  await expect(taskRow.getByText("queued")).toBeVisible({ timeout: 5_000 })
 
   // 4. Wait for worker to claim and complete (fake adapter ~3s + claim poll ~5s)
-  await expect(page.getByText("awaiting_review")).toBeVisible({ timeout: 30_000 })
+  await expect(taskRow.getByText("awaiting_review")).toBeVisible({ timeout: 30_000 })
 
-  // 5. Navigate to reviews page
+  // 5. Navigate to reviews page — find the run link for this task
   await page.getByRole("link", { name: "Reviews" }).first().click()
   await expect(page.getByTestId("reviews-root")).toBeVisible()
 
-  // 6. Verify task appears in awaiting_review section
-  await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 5_000 })
+  // 6. Scope to the row containing our task title
+  const reviewRow = page.locator("div.border", { hasText: taskTitle })
+  await expect(reviewRow).toBeVisible({ timeout: 5_000 })
 
-  // 7. Approve the task
-  await page.getByRole("button", { name: "Approve" }).click()
-  await expect(page.getByText("pr_ready")).toBeVisible({ timeout: 5_000 })
+  // 7. Navigate to run detail page via the run link
+  const runLink = reviewRow.locator("a").first()
+  await runLink.click()
+  await expect(page.getByTestId("run-detail-root")).toBeVisible({ timeout: 5_000 })
 
-  // 8. Merge the task
-  await page.getByRole("button", { name: "Merge" }).click()
-  await expect(page.getByText("Merging...")).toBeVisible({ timeout: 5_000 })
+  // 8. Verify run detail page shows Commits card and View Diff button
+  await expect(page.getByText("Commits")).toBeVisible()
+  await expect(page.getByRole("button", { name: "View Diff" })).toBeVisible()
 
-  // 9. Wait for merge-loop to complete (polls every 5s)
+  // 9. Go back to reviews page for approve/merge flow
+  await page.goBack()
+  await expect(page.getByTestId("reviews-root")).toBeVisible()
+
+  // 10. Approve the task — scoped to the row with our task title
+  const approveRow = page.locator("div.border", { hasText: taskTitle })
+  await approveRow.getByRole("button", { name: "Approve" }).click()
+
+  // 11. Verify task moves to pr_ready section — find the merge row
+  const mergeRow = page.locator("div.border", { hasText: taskTitle })
+  await expect(mergeRow.getByText("pr_ready")).toBeVisible({ timeout: 5_000 })
+
+  // 12. Merge — scoped to our task's row
+  await mergeRow.getByRole("button", { name: "Merge" }).click()
+  await expect(mergeRow.getByText("Merging...")).toBeVisible({ timeout: 5_000 })
+
+  // 13. Wait for merge-loop to complete (polls every 5s)
   await expect(page.getByText("merged")).toBeVisible({ timeout: 30_000 })
 })

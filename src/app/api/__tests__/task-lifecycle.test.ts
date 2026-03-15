@@ -15,6 +15,7 @@ import { POST as approveTask } from "@/app/api/tasks/[id]/approve/route"
 import { POST as rejectTask } from "@/app/api/tasks/[id]/reject/route"
 import { POST as mergeTask } from "@/app/api/tasks/[id]/merge/route"
 import { POST as createRun } from "@/app/api/runs/route"
+import { GET as getDiff } from "@/app/api/runs/[id]/diff/route"
 
 function makeParams(id: string) {
   return { params: Promise.resolve({ id }) }
@@ -302,5 +303,48 @@ describe("Task lifecycle API", () => {
     expect(res.status).toBe(409)
     const data = await res.json()
     expect(data.error).toContain("already")
+  })
+
+  it("14. Diff endpoint returns 404 for unknown run", async () => {
+    const res = await getDiff(
+      getReq("/api/runs/nonexistent/diff"),
+      makeParams("nonexistent"),
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it("15. Diff endpoint returns 400 when run has no commit data", async () => {
+    const task = await createTestTask(db, { status: "in_progress" })
+    const run = await createTestRun(db, task.id, {
+      status: "succeeded",
+      baseCommitSha: null,
+      headCommitSha: null,
+    })
+
+    const res = await getDiff(
+      getReq(`/api/runs/${run.id}/diff`),
+      makeParams(run.id),
+    )
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toContain("commit data")
+  })
+
+  it("16. Reject stores reason in event and lastRejectReason is projected", async () => {
+    const task = await createTestTask(db, { status: "awaiting_review" })
+    await createTestRun(db, task.id, { status: "succeeded", attempt: 1 })
+
+    await rejectTask(
+      postJson(`/api/tasks/${task.id}/reject`, { reason: "needs more tests" }),
+      makeParams(task.id),
+    )
+
+    // GET task should include lastRejectReason (task is now queued)
+    const res = await getTask(
+      getReq(`/api/tasks/${task.id}`),
+      makeParams(task.id),
+    )
+    const data = await res.json()
+    expect(data.lastRejectReason).toBe("needs more tests")
   })
 })
