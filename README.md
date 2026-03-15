@@ -67,7 +67,7 @@ After starting, verify the system is operational:
 
 1. Open `http://localhost:3000/dashboard` — should show the dashboard
 2. Create a task via Inbox → "New Task"
-3. Check worker output for `[claim-loop] claimed run ...`
+3. Check worker output for `[worker] starting claim loop` (confirms worker is running)
 4. Wait for task to reach `awaiting_review` status
 5. Review the diff, approve or reject
 6. If approved, click Merge and verify the commit lands on the base branch
