@@ -34,9 +34,9 @@ if (!SUPPORTED_ADAPTERS.includes(adapterKind as SupportedAdapter)) {
 if (adapterKind === "codex" || adapterKind === "claude") {
   const binary = adapterKind === "codex" ? "codex" : "claude"
   try {
-    execFileSync("which", [binary], { stdio: "pipe" })
+    execFileSync(binary, ["--version"], { stdio: "pipe" })
   } catch {
-    console.error(`[worker] FATAL: ${binary} CLI not found on PATH`)
+    console.error(`[worker] FATAL: ${binary} CLI not found on PATH or not executable`)
     process.exit(1)
   }
 }

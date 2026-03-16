@@ -160,6 +160,20 @@ export const claudeAdapter: AgentAdapter = {
     let cancelled = false
     const state = { sawResult: false, isError: false }
 
+    // Eagerly scan for result event via raw data listener.
+    // This fires synchronously on data arrival, independent of the async
+    // generator's consumer pace. By the time `close` fires, all `data`
+    // events have already fired, so `sawResult` is reliable.
+    child.stdout?.on("data", (chunk: Buffer) => {
+      const str = chunk.toString()
+      if (str.includes('"type":"result"')) {
+        state.sawResult = true
+        if (str.includes('"is_error":true')) {
+          state.isError = true
+        }
+      }
+    })
+
     return {
       pid: child.pid!,
       stdout: parseClaudeStream(child.stdout, state),
@@ -176,7 +190,7 @@ export const claudeAdapter: AgentAdapter = {
             if (cancelled) {
               finishReason = "cancelled"
               exitCode = 1
-            } else if (code === 0 && !state.isError) {
+            } else if (code === 0 && state.sawResult && !state.isError) {
               const commitResult = ensureCommitted(config.worktreePath, config.taskId)
               if (commitResult.status === "error") {
                 finishReason = "failed"

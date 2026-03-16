@@ -72,10 +72,9 @@ describe("claude adapter", () => {
     expect(child.unref).toHaveBeenCalled()
   })
 
-  it("handle.wait() resolves completed on exit 0 with no dirty files", async () => {
+  it("handle.wait() resolves completed on exit 0 with result event and no dirty files", async () => {
     const child = createMockChild(5678)
     mockSpawn.mockReturnValue(child as never)
-    // git status --porcelain returns empty (no dirty files)
     mockExecFileSync.mockImplementation((cmd, args) => {
       if (Array.isArray(args) && args.includes("--porcelain")) return "" as never
       if (Array.isArray(args) && args.includes("rev-parse")) return "sha-abc\n" as never
@@ -84,6 +83,11 @@ describe("claude adapter", () => {
 
     const handle = claudeAdapter.start(baseConfig)
     const waitPromise = handle.wait()
+    // Push result event — data listener fires synchronously on push
+    child.stdout.push('{"type":"result","result":{"is_error":false}}\n')
+    child.stdout.push(null)
+    // Allow data event to propagate before close
+    await new Promise((r) => setTimeout(r, 0))
     child.emit("close", 0)
     const result = await waitPromise
 
@@ -103,12 +107,29 @@ describe("claude adapter", () => {
 
     const handle = claudeAdapter.start(baseConfig)
     const waitPromise = handle.wait()
+    child.stdout.push('{"type":"result","result":{"is_error":false}}\n')
+    child.stdout.push(null)
+    await new Promise((r) => setTimeout(r, 0))
     child.emit("close", 0)
     const result = await waitPromise
 
     expect(result.exitCode).toBe(0)
     expect(result.finishReason).toBe("completed")
     expect(result.commitSha).toBe("sha-def")
+  })
+
+  it("handle.wait() resolves failed on exit 0 without result event", async () => {
+    const child = createMockChild(5678)
+    mockSpawn.mockReturnValue(child as never)
+
+    const handle = claudeAdapter.start(baseConfig)
+    const waitPromise = handle.wait()
+    child.stdout.push(null)
+    child.emit("close", 0)
+    const result = await waitPromise
+
+    expect(result.exitCode).toBe(0)
+    expect(result.finishReason).toBe("failed")
   })
 
   it("handle.wait() resolves failed on non-zero exit", async () => {
