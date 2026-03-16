@@ -34,11 +34,16 @@ export default function ReviewsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [tasksRes, runsRes] = await Promise.all([
-        fetch("/api/tasks"),
-        fetch("/api/runs"),
+      const [reviewTasksRes, prReadyTasksRes, runsRes] = await Promise.all([
+        fetch("/api/tasks?status=awaiting_review&limit=100"),
+        fetch("/api/tasks?status=pr_ready&limit=100"),
+        fetch("/api/runs?limit=500"),
       ])
-      if (tasksRes.ok) setTasks(await tasksRes.json())
+      const [reviewTasks, prReadyTasks] = await Promise.all([
+        reviewTasksRes.ok ? reviewTasksRes.json() : [],
+        prReadyTasksRes.ok ? prReadyTasksRes.json() : [],
+      ])
+      setTasks([...reviewTasks, ...prReadyTasks])
       if (runsRes.ok) setRuns(await runsRes.json())
     } finally {
       setLoading(false)
