@@ -368,7 +368,7 @@ describe("Task lifecycle API", () => {
 
   it("18. Create task with unsupported AGENT_ADAPTER returns 400", async () => {
     const original = process.env.AGENT_ADAPTER
-    process.env.AGENT_ADAPTER = "claude"
+    process.env.AGENT_ADAPTER = "unsupported"
 
     const res = await createTask(
       postJson("/api/tasks", { title: "Test", autoRun: true }),
@@ -402,7 +402,7 @@ describe("Task lifecycle API", () => {
     await createTestRun(db, task.id, { status: "succeeded", attempt: 1 })
 
     const original = process.env.AGENT_ADAPTER
-    process.env.AGENT_ADAPTER = "claude"
+    process.env.AGENT_ADAPTER = "unsupported"
 
     const res = await rejectTask(
       postJson(`/api/tasks/${task.id}/reject`, { reason: "needs work" }),

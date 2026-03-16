@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { fakeAdapter } from "./fake-adapter"
 import { codexAdapter } from "./codex-adapter"
+import { claudeAdapter } from "./claude-adapter"
 import { getHeartbeatPath, SUPPORTED_ADAPTERS, type SupportedAdapter } from "./constants"
 import { DEFAULT_DATABASE_URL } from "../db/constants"
 import type { AgentAdapter } from "./types"
@@ -30,11 +31,12 @@ if (!SUPPORTED_ADAPTERS.includes(adapterKind as SupportedAdapter)) {
   console.error(`[worker] FATAL: unsupported AGENT_ADAPTER="${adapterKind}". Supported: ${SUPPORTED_ADAPTERS.join(", ")}`)
   process.exit(1)
 }
-if (adapterKind === "codex") {
+if (adapterKind === "codex" || adapterKind === "claude") {
+  const binary = adapterKind === "codex" ? "codex" : "claude"
   try {
-    execFileSync("which", ["codex"], { stdio: "pipe" })
+    execFileSync("which", [binary], { stdio: "pipe" })
   } catch {
-    console.error("[worker] FATAL: codex CLI not found on PATH")
+    console.error(`[worker] FATAL: ${binary} CLI not found on PATH`)
     process.exit(1)
   }
 }
@@ -42,6 +44,7 @@ if (adapterKind === "codex") {
 function getAdapter(): AgentAdapter {
   switch (adapterKind) {
     case "codex": return codexAdapter
+    case "claude": return claudeAdapter
     default: return fakeAdapter
   }
 }

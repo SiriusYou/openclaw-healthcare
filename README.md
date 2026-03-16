@@ -39,7 +39,7 @@ Set `AGENT_ADAPTER` in `.env.local`:
 |---------|--------|-------------|
 | `fake` | **Supported** (default) | Test adapter — creates a file and exits |
 | `codex` | **Supported** | OpenAI Codex CLI (`codex` binary must be on PATH) |
-| `claude` | Stub | Forward-compatibility enum value; not a valid operator target |
+| `claude` | **Supported** | Claude Code CLI (`claude` binary must be on PATH) |
 | `gemini` | Stub | Forward-compatibility enum value; not a valid operator target |
 
 The worker validates the adapter at startup and will refuse to start if an unsupported adapter is selected or if the required CLI binary is missing.
@@ -81,7 +81,7 @@ After starting, verify the system is operational:
 | Run in `stale_process_blocked` | Cleanup found a still-running agent process | Kill the stale process manually, then retry the run via the UI |
 | Run in `cleanup_pending` | Normal — cleanup loop will remove the worktree | Wait for cleanup loop (30s interval) or restart worker |
 | Merge fails repeatedly | Git conflict on base branch | Pull latest on base branch, resolve conflict manually, then re-approve |
-| Worker refuses to start | Unsupported `AGENT_ADAPTER` or missing binary | Check `.env.local` — only `fake` and `codex` are supported. For codex, ensure `codex` is on PATH |
+| Worker refuses to start | Unsupported `AGENT_ADAPTER` or missing binary | Check `.env.local` — supported values: `fake`, `codex`, `claude`. For codex/claude, ensure the CLI binary is on PATH |
 
 ### Database
 

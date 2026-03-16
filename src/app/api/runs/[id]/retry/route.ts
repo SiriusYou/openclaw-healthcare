@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import { runs, tasks } from "@/lib/db/schema"
 import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
-import { MAX_AUTO_RETRIES, getValidatedAdapterKind } from "@/lib/agents/constants"
+import { MAX_AUTO_RETRIES, getValidatedAdapterKind, SUPPORTED_ADAPTERS } from "@/lib/agents/constants"
 import { json, error } from "@/lib/api-utils"
 
 export async function POST(
@@ -48,7 +48,7 @@ export async function POST(
 
   const validAdapter = getValidatedAdapterKind()
   if (!validAdapter) {
-    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: fake, codex`, 400)
+    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: ${SUPPORTED_ADAPTERS.join(", ")}`, 400)
   }
 
   // Create new run atomically

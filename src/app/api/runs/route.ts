@@ -5,7 +5,7 @@ import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import { json, error } from "@/lib/api-utils"
-import { getValidatedAdapterKind } from "@/lib/agents/constants"
+import { getValidatedAdapterKind, SUPPORTED_ADAPTERS } from "@/lib/agents/constants"
 
 const createRunSchema = z.object({
   taskId: z.string().min(1),
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   const agentKind = getValidatedAdapterKind()
   if (!agentKind) {
-    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: fake, codex`, 400)
+    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: ${SUPPORTED_ADAPTERS.join(", ")}`, 400)
   }
   const nextAttempt = activeRun ? (activeRun.attempt ?? 0) + 1 : 1
 

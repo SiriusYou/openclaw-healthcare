@@ -5,7 +5,7 @@ import { eq, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 import { json, error } from "@/lib/api-utils"
-import { getValidatedAdapterKind } from "@/lib/agents/constants"
+import { getValidatedAdapterKind, SUPPORTED_ADAPTERS } from "@/lib/agents/constants"
 
 const rejectSchema = z.object({
   reason: z.string().optional(),
@@ -21,7 +21,7 @@ export async function POST(
 
   const validAdapter = getValidatedAdapterKind()
   if (!validAdapter) {
-    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: fake, codex`, 400)
+    return error(`Unsupported AGENT_ADAPTER="${process.env.AGENT_ADAPTER}". Supported: ${SUPPORTED_ADAPTERS.join(", ")}`, 400)
   }
 
   if (task.status !== "awaiting_review") {

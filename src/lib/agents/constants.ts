@@ -3,7 +3,7 @@ import { basename } from "node:path"
 export const MAX_AUTO_RETRIES = 2
 
 /** Adapters that the worker can actually run. claude/gemini are schema-only stubs. */
-export const SUPPORTED_ADAPTERS = ["fake", "codex"] as const
+export const SUPPORTED_ADAPTERS = ["fake", "codex", "claude"] as const
 export type SupportedAdapter = (typeof SUPPORTED_ADAPTERS)[number]
 
 /** Returns the validated adapter kind from AGENT_ADAPTER env var, or null if unsupported. */
